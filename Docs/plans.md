@@ -1,0 +1,2 @@
+- ⏳ **Structured Logging:** Add a `-Json` switch. Instead of plain text, output logs as JSON objects to allow for easier ingestion by tools like Splunk, ELK Stack, or Azure Monitor.
+-  ⏳ **Configuration Files:** Implement `.json` or `.xml` configuration files so users don't have to pass long parameter strings every time they call the function.
