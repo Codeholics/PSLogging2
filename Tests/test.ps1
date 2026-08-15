@@ -1,4 +1,4 @@
-$CPScriptRoot = "E:\Code\Repos\PowerShell-Modules\Modules\PSLogging2"
+$CPScriptRoot = (Split-Path -Parent $PSScriptRoot)
 Import-Module (Join-Path -Path $CPScriptRoot -ChildPath "PSLogging2.psm1") -Force
 
 Start-Log `

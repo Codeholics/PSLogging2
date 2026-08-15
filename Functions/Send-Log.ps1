@@ -30,22 +30,30 @@
     servers or adjust to your environment.
 #>
 function Send-Log {
+    [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [Parameter(Mandatory=$true)][string]$SMTPServer,
+
         [Parameter(Mandatory=$true)][string]$LogPath,
         [Parameter(Mandatory=$true)][string]$EmailFrom,
         [Parameter(Mandatory=$true)][string]$EmailTo,
         [Parameter(Mandatory=$true)][string]$EmailSubject
     )
 
+    if (-not (Test-Path $LogPath)) {
+        Write-Error "Log file not found: $LogPath"
+        return $false
+    }
+
     Try {
         $sBody = Get-Content -Path $LogPath -Raw
         $oSmtp = New-Object Net.Mail.SmtpClient($SMTPServer)
         $oSmtp.Send($EmailFrom, $EmailTo, $EmailSubject, $sBody)
+        $oSmtp.Timeout = 30000
         return $true
     } Catch {
-        Write-Error "Failed to send log email: $($_.Exception.Message)"
+        Write-Error "Failed to send log email: $($_)"
         return $false
     }
 }
-# (Duplicate Send-Log definition removed)

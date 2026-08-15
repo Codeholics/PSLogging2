@@ -20,7 +20,9 @@
 
 .EXAMPLE
     Write-LogWarning -Message 'Configuration deprecated' -TimeStampBack
+#>
 function Write-LogWarning {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
@@ -47,7 +49,11 @@ function Write-LogWarning {
     if ($ToScreen) { Write-Host $line -ForegroundColor Yellow }
 
     if ($null -ne $targetPath -and (Test-Path $targetPath)) {
-        Add-Content -Path $targetPath -Value $line -Encoding UTF8
+        try {
+            Append-LogAtomic -Path $targetPath -Value $line -MaxRetries 8 -RetryDelayMs 200 | Out-Null
+        } catch {
+            Write-Warning "Failed to append warning to log: $($_.Exception.Message)"
+        }
     } else {
         Write-Warning "Cannot write warning to log. Path is null or file does not exist."
     }
