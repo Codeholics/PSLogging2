@@ -25,6 +25,7 @@
     Stop-Log -ToScreen
 #>
 function Stop-Log {
+    [CmdletBinding()]
     param(
         [string]$logPath = $script:currentLogPath,
         [switch]$Exit,
@@ -53,8 +54,8 @@ function Stop-Log {
         Write-Host "Log finished: $logPath" -ForegroundColor Cyan
     }
 
-    #Exit calling script if NoExit has not been specified or is set to False
-    If(-not($NoExit) -or ($NoExit -eq $False)){
-      Exit
-    }
+        # Exit only when -Exit is specified and -NoExit is not present
+        if ($Exit -and -not $NoExit) {
+                Exit
+        }
 }

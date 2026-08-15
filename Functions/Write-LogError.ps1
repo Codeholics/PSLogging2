@@ -27,6 +27,7 @@
     Write-LogError -Message 'Fatal failure' -TimeStampBack -ExitGracefully
 #>
 function Write-LogError {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)][string]$Message,
         [switch]$TimeStampFront,
@@ -53,7 +54,11 @@ function Write-LogError {
     if ($ToScreen) { Write-Host $line -ForegroundColor Red }
 
     if ($null -ne $targetPath -and (Test-Path $targetPath)) {
-        Add-Content -Path $targetPath -Value $line -Encoding UTF8
+        try {
+            Append-LogAtomic -Path $targetPath -Value $line -MaxRetries 8 -RetryDelayMs 200 | Out-Null
+        } catch {
+            Write-Warning "Failed to append error to log: $($_.Exception.Message)"
+        }
     } else {
         Write-Warning "Cannot write error to log. Path is null or file does not exist."
     }

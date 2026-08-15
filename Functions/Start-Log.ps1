@@ -35,11 +35,12 @@
     All files and header content are written using UTF-8 encoding.
 #>
 function Start-Log {
+    [CmdletBinding()]
     Param(
         [string]$LogDir = (Join-Path -Path $PSScriptRoot -ChildPath "log"),
         [Parameter(Mandatory=$true)]
         [ValidateSet("Standard", "Simple", "Daily")]
-        [string]$Style, # Accepts "Standard" or "Simple"
+        [string]$Style,
         [string]$Title = "Script Log",
         [switch]$ToScreen,
         [string]$Version,
@@ -77,15 +78,13 @@ function Start-Log {
     try {
         $parentDir = Split-Path -Path $logPath -Parent
         if (-not (Test-Path -Path $parentDir)) {
-            New-Item -Path $parentDir -ItemType Directory | Out-Null
+            New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
         }
 
+        # We will initialize the file atomically (create if missing and write header/separator)
         $fileExists = Test-Path -Path $logPath
-        if (-not $fileExists) {
-            New-Item -Path $logPath -ItemType File | Out-Null
-        }
     } catch {
-        Write-Error "Failed to initialize log path at $logPath. Error: $($_.Exception.Message)"
+        throw "Failed to initialize log path at $logPath. Error: $($_.Exception.Message)"
     }
 
     try {
@@ -96,21 +95,11 @@ function Start-Log {
             $HeaderTitle = "$Title ($($Version)) - [$DateStamp]"
         }
 
-        # If the file already exists and we're in Daily mode, append a concise run separator
-        if (-not $fileExists) {
-            $header = @"
-***************************************************************************************************
-$HeaderTitle
-***************************************************************************************************
-"@
-            Add-Content -Path $logPath -Value "$header`n" -Encoding UTF8
-        } else {
-            if ($Style -eq 'Daily' -and -not $DisableDailySeparator) {
-                $separator = "----- New Run at [$DateStamp] -----"
-                Add-Content -Path $logPath -Value "$separator`n" -Encoding UTF8
-            } else {
-                # existing file and separator disabled or not Daily - do nothing
-            }
+        # Initialize header or separator using an exclusive lock to avoid concurrent write races
+        try {
+            Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator
+        } catch {
+            Write-Error "Failed to initialize log header/separator atomically: $($_.Exception.Message)"
         }
     } catch {
         Write-Error "Failed to write initial headers: $($_.Exception.Message)"

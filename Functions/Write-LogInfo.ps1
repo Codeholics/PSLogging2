@@ -20,14 +20,15 @@
 
 .EXAMPLE
     Write-LogInfo -Message 'Processing item' -TimeStampFront
+#>
 function Write-LogInfo {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message,
         # New explicit switches for clarity
         [switch]$TimeStampFront,
         [switch]$TimeStampBack,
-        
         [switch]$ToScreen
     )
 
@@ -50,7 +51,11 @@ function Write-LogInfo {
     if ($ToScreen) { Write-Host $formatted -ForegroundColor Cyan }
 
     if ($null -ne $targetPath -and (Test-Path $targetPath)) {
-        Add-Content -Path $targetPath -Value "- $($formatted)" -Encoding UTF8
+        try {
+            Append-LogAtomic -Path $targetPath -Value "- $($formatted)" -MaxRetries 8 -RetryDelayMs 200 | Out-Null
+        } catch {
+            Write-Warning "Failed to append to log: $($_.Exception.Message)"
+        }
     } else {
         Write-Warning "Cannot write to log. Path is null or file does not exist."
     }
