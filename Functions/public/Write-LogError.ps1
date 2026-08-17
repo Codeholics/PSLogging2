@@ -29,42 +29,34 @@
 function Write-LogError {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true)][string]$Message,
-        [switch]$TimeStampFront,
-        [switch]$TimeStampBack,
-        
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Message,
+        [ValidateSet('Front','Back','None')][string]$TimestampPosition = 'None',
         [switch]$ExitGracefully,
         [switch]$ToScreen
     )
 
     $targetPath = $script:currentLogPath
 
-    $useFront = $false
-    $useBack = $false
-    if ($TimeStampFront) { $useFront = $true }
-    if ($TimeStampBack) { $useBack = $true }
-
-    if ($useFront -or $useBack) {
+    if ($TimestampPosition -ne 'None') {
         $ts = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]"
-        if ($useFront) { $line = "ERROR: $ts $Message" } else { $line = "ERROR: $Message $ts" }
+        if ($TimestampPosition -eq 'Front') { $line = "ERROR: $ts $Message" } else { $line = "ERROR: $Message $ts" }
     } else {
         $line = "ERROR: $Message"
     }
 
     if ($ToScreen) { Write-Host $line -ForegroundColor Red }
 
-    if ($null -ne $targetPath -and (Test-Path $targetPath)) {
+    if ($null -ne $targetPath) {
         try {
             Append-LogAtomic -Path $targetPath -Value $line -MaxRetries 8 -RetryDelayMs 200 | Out-Null
         } catch {
             Write-Warning "Failed to append error to log: $($_.Exception.Message)"
         }
     } else {
-        Write-Warning "Cannot write error to log. Path is null or file does not exist."
+        Write-Warning "Cannot write error to log. Path is null."
     }
 
     if ($ExitGracefully) {
-        Stop-Log -logPath $targetPath -NoExit
-        Exit 1
+        Stop-Log -LogPath $targetPath
     }
 }

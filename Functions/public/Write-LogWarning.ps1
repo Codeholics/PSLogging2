@@ -25,36 +25,31 @@ function Write-LogWarning {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string]$Message,
-        [switch]$TimeStampFront,
-        [switch]$TimeStampBack,
-        
+        [ValidateSet('Front','Back','None')]
+        [string]$TimestampPosition = 'None',
         [switch]$ToScreen
     )
 
     $targetPath = $script:currentLogPath
 
-    $useFront = $false
-    $useBack = $false
-    if ($TimeStampFront) { $useFront = $true }
-    if ($TimeStampBack) { $useBack = $true }
-
-    if ($useFront -or $useBack) {
+    if ($TimestampPosition -ne 'None') {
         $ts = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]"
-        if ($useFront) { $line = "WARNING: $ts $Message" } else { $line = "WARNING: $Message $ts" }
+        if ($TimestampPosition -eq 'Front') { $line = "WARNING: $ts $Message" } else { $line = "WARNING: $Message $ts" }
     } else {
         $line = "WARNING: $Message"
     }
 
     if ($ToScreen) { Write-Host $line -ForegroundColor Yellow }
 
-    if ($null -ne $targetPath -and (Test-Path $targetPath)) {
+    if ($null -ne $targetPath) {
         try {
             Append-LogAtomic -Path $targetPath -Value $line -MaxRetries 8 -RetryDelayMs 200 | Out-Null
         } catch {
             Write-Warning "Failed to append warning to log: $($_.Exception.Message)"
         }
     } else {
-        Write-Warning "Cannot write warning to log. Path is null or file does not exist."
+        Write-Warning "Cannot write warning to log. Path is null."
     }
 }
