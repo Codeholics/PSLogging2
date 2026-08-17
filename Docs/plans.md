@@ -154,25 +154,165 @@ Migration steps:
 - Continue pruning stale findings from `Docs/Review.md` as fixes land.
  - ✅ Update `README.md` to match current timestamp behavior and explicit `LogContext` usage.
 
-### ⏳ 2. Add focused validation coverage
+### ⏳ 2. Expand Validation Coverage
 
- - ✅ Add a smoke test for `Stop-Log` footer writing.
- - ✅ Add a smoke test for `Write-LogError -ExitGracefully` once its behavior is redesigned.
- - ✅ Add tests for timestamp option validation.
- - ⏳ Add a test for `Send-Log` validation behavior.
+#### ✅ Existing Coverage
+
+- ✅ Stop-Log footer writing
+- ✅ Write-LogError -ExitGracefully behavior
+- ✅ Timestamp formatting and validation
+- ✅ LogContext workflow validation
+- ✅ Send-Log success-path validation
+- ✅ Concurrent multi-process writes
+
+#### ⏳ Failure Path Testing
+
+- ⏳ Add tests for retry exhaustion in `Append-LogAtomic`.
+- ⏳ Add tests for invalid or malformed `LogContext` objects.
+- ⏳ Add tests for underlying append failures in writer functions.
+- ⏳ Add tests for `Send-Log` SMTP exceptions.
+- ⏳ Add tests for log directory creation failures.
+
+#### ⏳ Concurrency Integrity Validation
+
+Extend the existing concurrency suite to validate:
+
+- ⏳ Exact expected entry count.
+- ⏳ Duplicate entry detection.
+- ⏳ Corrupted or interleaved entry detection.
+- ⏳ Header integrity validation.
+- ⏳ Footer integrity validation.
+
+#### ⏳ Daily Initialization Race Testing
+
+Add validation for concurrent startup scenarios:
+
+- ⏳ Multiple PowerShell processes simultaneously running:
+
+```powershell
+Start-Log -Style Daily
+```
+
+against a non-existent daily log.
+
+Validate:
+
+- Only one header is created.
+- No duplicate initialization data exists.
+- No corruption occurs.
+- No initialization failures occur.
 
 Recent verification:
 
 - ✅ `Tests/Pester/Timestamp.Tests.ps1` now covers `-TimestampPosition Front|Back|None` formatting and invalid value rejection.
 - ✅ Full `Tests/Pester` suite passes after the LogContext, Send-Log, concurrency, and timestamp test updates.
 
+## Additional Atomic Logging Validation
+
+The existing concurrency test suite validates multi-process and multi-job logging behavior.
+
+Additional validation targets:
+
+### ⏳ Concurrency Scale Testing
+
+- ⏳ 1,000+ simultaneous writes
+- ⏳ Multiple PowerShell jobs
+- ⏳ Multiple PowerShell processes
+- ⏳ Multiple runspaces
+- ⏳ Mixed workload scenarios
+
+### ⏳ Integrity Validation
+
+Validate:
+
+- ⏳ No duplicate entries
+- ⏳ No missing entries
+- ⏳ No malformed entries
+- ⏳ No interleaved/corrupted log lines
+- ⏳ Exact expected entry counts
+- ⏳ Correct header creation behavior
+- ⏳ Correct footer creation behavior
+
+### ⏳ Environment Validation
+
+Validate behavior with:
+
+- ⏳ Network shares
+- ⏳ High I/O contention
+- ⏳ Long-running daily logs
+
 ## ⏳ Deferred Architecture Work
 
 - Evaluate whether module-wide script variables should be replaced with explicit state passed between functions.
 - Evaluate whether parallel runspace support is a goal for this module or out of scope.
 
+## ⏳ Internal Architecture Improvements
+
+### ⏳ Centralize LogPath Resolution
+
+The following functions currently contain duplicate LogContext-to-LogPath resolution logic:
+
+- Write-LogInfo
+- Write-LogWarning
+- Write-LogError
+- Send-Log
+
+Evaluate creating a private helper:
+
+```powershell
+Resolve-LogPath
+```
+
+Benefits:
+
+- Reduces duplication
+- Simplifies maintenance
+- Provides consistent path resolution behavior
+- Makes future enhancements easier
+
+### ⏳ Standardize Exception Message Formatting
+
+Several functions currently generate exception messages independently.
+
+Evaluate creating a private helper:
+
+```powershell
+New-LogExceptionMessage
+```
+
+Benefits:
+
+- Consistent diagnostics
+- Easier troubleshooting
+- Better GitHub issue reporting
+- Clearer production logging failures
+
+### ⏳ Establish Private Helper Structure
+
+Consider organizing reusable internal functionality within a dedicated private folder structure.
+
+Example:
+
+```text
+Functions\
+    Private\
+        Resolve-LogPath.ps1
+        New-LogExceptionMessage.ps1
+```
+
+Benefits:
+
+- Cleaner architecture
+- Better separation of concerns
+- Easier long-term maintenance
+- Simpler contributor onboarding
+
 ## ⏳ Future Enhancements
 
 - ⏳ **Structured Logging:** Add a `-Json` switch. Instead of plain text, output logs as JSON objects to allow for easier ingestion by tools like Splunk, ELK Stack, or Azure Monitor.
 - ⏳ **Configuration Files:** Implement `.json` or `.xml` configuration files so users don't have to pass long parameter strings every time they call the function.
-- ⏳ **Pester Test(s):** A great method to unit test the function to help identity bugs and resolve them.
+- ✅ **Pester Test(s):** A great method to unit test the function to help identity bugs and resolve them.
+- ⏳ **Teams Webhook:** Get notified via Microsoft teams when an error is logged or automation completed
+- ⏳ **ServiceNow Incident:** Create a ServiceNow Incident if an error is logged
+- ⏳ **Email through Graph:** Send-Logs via Email with Graph (as an option) because Graph is becoming more popular for IT teams to send automated emails in a Microsoft environment.
+- ⏳ **Jenkins notifications:**: (This feature was recommended, but I am not sure of the exact use case)
