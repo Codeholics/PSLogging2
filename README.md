@@ -16,7 +16,7 @@ PSLogging2 provides file-based logging with simple writer functions, multiple lo
 
 - Three log file layouts: `Simple`, `Standard`, and `Daily`
 - Dedicated helpers for info, warning, and error messages
-- Optional timestamp placement at the front or back of a message
+- Optional timestamp placement controlled by `-TimestampPosition <Front|Back|None>`
 - Daily log reuse with automatic run separators
 - Atomic append logic for safer concurrent writes
 - Optional SMTP delivery with `Send-Log`
@@ -56,8 +56,8 @@ Import-Module .\PSLogging2.psm1 -Force
 
 Start-Log -Style Simple -LogDir .\log -Title 'Inventory Script' -Version '1.0' -ToScreen
 Write-LogInfo -Message 'Starting run'
-Write-LogWarning -Message 'Using fallback configuration' -TimeStampFront
-Write-LogInfo -Message 'Completed step 1' -TimeStampBack
+Write-LogWarning -Message 'Using fallback configuration' -TimestampPosition Front
+Write-LogInfo -Message 'Completed step 1' -TimestampPosition Back
 Stop-Log -ToScreen
 ```
 
@@ -104,7 +104,7 @@ When the file already exists, the module appends a run separator unless `-Disabl
 ```powershell
 Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -Version '2.3'
 Write-LogInfo -Message 'Job started'
-Write-LogInfo -Message 'Import complete' -TimeStampBack
+Write-LogInfo -Message 'Import complete' -TimestampPosition Back
 Stop-Log
 ```
 
@@ -112,7 +112,7 @@ Stop-Log
 
 ```powershell
 Start-Log -Style Daily -LogDir .\log -Title 'Daily Sync'
-Write-LogInfo -Message 'Sync started' -TimeStampFront
+Write-LogInfo -Message 'Sync started' -TimestampPosition Front
 Write-LogWarning -Message 'Remote system responded slowly'
 Stop-Log
 ```
@@ -121,23 +121,23 @@ Stop-Log
 
 ```powershell
 Start-Log -Style Simple -LogDir .\log -Title 'Deployment'
-Write-LogError -Message 'Deployment failed' -TimeStampBack -ToScreen
+Write-LogError -Message 'Deployment failed' -TimestampPosition Back -ToScreen
 Stop-Log
 ```
 
 ## Timestamp Behavior
 
-Timestamps are optional.
+Timestamps are optional and controlled by the `-TimestampPosition` parameter.
 
-- No timestamp switch: message is written as-is
-- `-TimeStampFront`: timestamp is prepended
-- `-TimeStampBack`: timestamp is appended
+- `-TimestampPosition None` (default): message is written as-is
+- `-TimestampPosition Front`: timestamp is prepended
+- `-TimestampPosition Back`: timestamp is appended
 
 Example:
 
 ```powershell
-Write-LogInfo -Message 'Processing item' -TimeStampFront
-Write-LogWarning -Message 'Retrying request' -TimeStampBack
+Write-LogInfo -Message 'Processing item' -TimestampPosition Front
+Write-LogWarning -Message 'Retrying request' -TimestampPosition Back
 ```
 
 ## Functions
@@ -148,7 +148,7 @@ Write-LogWarning -Message 'Retrying request' -TimeStampBack
 | `Write-LogInfo` | Appends informational messages |
 | `Write-LogWarning` | Appends warning messages |
 | `Write-LogError` | Appends error messages and can optionally stop execution |
-| `Stop-Log` | Writes footer information and optionally exits |
+| `Stop-Log` | Writes footer information and exits by default (use `-NoExit` to prevent exiting) |
 | `Send-Log` | Emails a completed log file through SMTP |
 
 ## Concurrency
@@ -189,10 +189,13 @@ Notes:
 
 ## Current Limitations
 
-- `Write-LogError -ExitGracefully` still exits the calling process with exit code `1`
-- Writer functions still use the `-TimeStampFront` and `-TimeStampBack` dual-switch model
-- Module state is shared through script-scope variables
-- `Send-Log` is functional but not fully enterprise-hardened yet
+- Writer functions use script-scoped module state (consider moving to explicit context)
+- `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling)
+- Pipeline support for `Write-LogError` is not fully implemented and may be removed or revised
+
+Notes:
+- `Stop-Log` exits by default after writing the footer; pass `-NoExit` to prevent exiting.
+- Timestamp switches were replaced with `-TimestampPosition` and writer functions now validate `Message` input.
 
 ## Development
 

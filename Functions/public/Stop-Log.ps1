@@ -10,13 +10,9 @@
     Optional explicit path to a log file. Defaults to the current log file
     initialized by `Start-Log`.
 
-.PARAMETER Exit
-    When specified, `Stop-Log` writes footer data and then exits the calling
-    process.
-
-.PARAMETER NoExit
-    Legacy compatibility switch. Ignored unless used together with `-Exit`, in
-    which case it suppresses exiting.
+    PARAMETER NoExit
+    When specified, `Stop-Log` will NOT exit the calling process after writing
+    footer data. By default `Stop-Log` will exit unless `-NoExit` is provided.
 
 .PARAMETER ToScreen
     When specified, writes a short completion message to the host.
@@ -27,13 +23,12 @@
 function Stop-Log {
     [CmdletBinding()]
     param(
-        [string]$logPath = $script:currentLogPath,
-        [switch]$Exit,
+        [string]$LogPath = $script:currentLogPath,
         [switch]$NoExit,
         [switch]$ToScreen
     )
 
-    if (-not (Test-Path -Path $logPath)) { return }
+    if ($null -eq $LogPath) { return }
 
     if ($null -ne $script:LogStopwatch) {
         $script:LogStopwatch.Stop()
@@ -44,18 +39,33 @@ function Stop-Log {
 
     $endTime = Get-Date
 
-    Add-Content -Path $logPath -Value "" -Encoding UTF8
-    Add-Content -Path $logPath -Value "***************************************************************************************************" -Encoding UTF8
-    Add-Content -Path $logPath -Value "Finished at: $endTime" -Encoding UTF8
-    Add-Content -Path $logPath -Value "Total Execution Time: $($elapsed.Minutes)m $($elapsed.Seconds)s" -Encoding UTF8
-    Add-Content -Path $logPath -Value "***************************************************************************************************" -Encoding UTF8
+    # Build footer block and write atomically using Append-LogAtomic
+    $elapsedString = $elapsed.ToString('c')
+    $footerLines = @()
+    $footerLines += ''
+    $footerLines += '***************************************************************************************************'
+    $footerLines += "Finished at: $endTime"
+    $footerLines += "Total Execution Time: $elapsedString"
+    $footerLines += '***************************************************************************************************'
 
-    if ($ToScreen) {
-        Write-Host "Log finished: $logPath" -ForegroundColor Cyan
+    $footer = $footerLines -join "`r`n"
+
+    try {
+        Append-LogAtomic -Path $LogPath -Value $footer -MaxRetries 8 -RetryDelayMs 200 | Out-Null
+    } catch {
+        Write-Error "Failed to write footer to log '$LogPath': $($_.Exception.Message)"
     }
 
-        # Exit only when -Exit is specified and -NoExit is not present
-        if ($Exit -and -not $NoExit) {
-                Exit
-        }
+    if ($ToScreen) {
+        Write-Host "Log finished: $LogPath" -ForegroundColor Cyan
+    }
+
+    # Clear script-scope state
+    if ($null -ne $script:LogStopwatch) { Remove-Variable -Scope Script -Name LogStopwatch -ErrorAction SilentlyContinue }
+    if ($null -ne $script:currentLogPath) { Remove-Variable -Scope Script -Name currentLogPath -ErrorAction SilentlyContinue }
+
+    # By default exit unless -NoExit was supplied
+    if (-not $NoExit) {
+        Exit
+    }
 }

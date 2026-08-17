@@ -9,17 +9,17 @@ Start-Log `
     -Version "1.0"
 
 Write-LogInfo -Message "This was a test" -ToScreen
-Write-LogInfo -Message "Another test message" -ToScreen -TimeStampBack
-Write-LogInfo -Message "Another test message" -ToScreen -TimeStampFront
-Write-LogInfo -Message "Another test message" -ToScreen -TimeStampBack
+Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Back
+Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Front
+Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Front
 
-Write-LogError -message "hello" -TimeStampBack -ToScreen
-Write-LogError -message "hello" -TimeStampFront -ToScreen
-Write-LogError -message "hello" -TimeStampBack -ToScreen
+Write-LogError -message "hello" -TimestampPosition Back -ToScreen
+Write-LogError -message "hello" -TimestampPosition Front -ToScreen
+Write-LogError -message "hello" -TimestampPosition Back -ToScreen
 
-Write-LogError -message "hello" -TimeStampBack -ToScreen -ExitGracefully
+Write-LogError -message "hello" -TimestampPosition Back -ToScreen -ExitGracefully
 
-Write-LogWarning -Message "This is a warning" -TimeStampBack -ToScreen
+Write-LogWarning -Message "This is a warning" -TimestampPosition 'back' -ToScreen
 # Send-Log -SMTPServer "smtp.example.com" -LogPath (Join-Path $PSScriptRoot 'log\2026\2026-08\A.log') -EmailFrom "me@example.com" -EmailTo "you@example.com" -EmailSubject "Log test"
 
 

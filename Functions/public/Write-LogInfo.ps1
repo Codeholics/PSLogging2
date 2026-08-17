@@ -25,10 +25,10 @@ function Write-LogInfo {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string]$Message,
-        # New explicit switches for clarity
-        [switch]$TimeStampFront,
-        [switch]$TimeStampBack,
+        [ValidateSet('Front','Back','None')]
+        [string]$TimestampPosition = 'None',
         [switch]$ToScreen
     )
 
@@ -36,27 +36,22 @@ function Write-LogInfo {
     $targetPath = $script:currentLogPath
 
     # Determine effective timestamp position.
-    $useFront = $false
-    $useBack = $false
-    if ($TimeStampFront) { $useFront = $true }
-    if ($TimeStampBack) { $useBack = $true }
-
-    if ($useFront -or $useBack) {
+    if ($TimestampPosition -ne 'None') {
         $ts = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]"
-        if ($useFront) { $formatted = "$ts $Message" } else { $formatted = "$Message $ts" }
+        if ($TimestampPosition -eq 'Front') { $formatted = "$ts $Message" } else { $formatted = "$Message $ts" }
     } else {
         $formatted = $Message
     }
 
     if ($ToScreen) { Write-Host $formatted -ForegroundColor Cyan }
 
-    if ($null -ne $targetPath -and (Test-Path $targetPath)) {
+    if ($null -ne $targetPath) {
         try {
             Append-LogAtomic -Path $targetPath -Value "- $($formatted)" -MaxRetries 8 -RetryDelayMs 200 | Out-Null
         } catch {
             Write-Warning "Failed to append to log: $($_.Exception.Message)"
         }
     } else {
-        Write-Warning "Cannot write to log. Path is null or file does not exist."
+        Write-Warning "Cannot write to log. Path is null."
     }
 }

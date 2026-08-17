@@ -48,25 +48,34 @@ Status legend:
 - Throw on header or initialization failure instead of only writing an error and continuing.
 - ✅ Fix the outdated inline comment on `Style` so it matches the supported values.
 - Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
+ - ✅ Throw on header or initialization failure instead of only writing an error and continuing.
 
 ### ⏳ 2. Harden `Stop-Log`
 
-- Add `[CmdletBinding()]`.
+- ✅ Add `[CmdletBinding()]`.
 - Add error handling around footer writes.
 - Replace multiple `Add-Content` calls with a single atomic footer write helper.
 - Clear script-scope state after completion (`$script:LogStopwatch`, `$script:currentLogPath`).
 - Improve elapsed time formatting for runs longer than 59 minutes.
 - Normalize parameter naming to match the rest of the module (`LogPath` instead of `logPath`).
+ - ✅ Add error handling around footer writes.
+ - ✅ Replace multiple `Add-Content` calls with a single atomic footer write helper.
+ - ✅ Clear script-scope state after completion (`$script:LogStopwatch`, `$script:currentLogPath`).
+ - ✅ Improve elapsed time formatting for runs longer than 59 minutes.
+ - ✅ Normalize parameter naming to match the rest of the module (`LogPath` instead of `logPath`).
 
 ### ⏳ 3. Harden log writer functions
 
 Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 
-- Add `[CmdletBinding()]` to all three functions.
+- ✅ Add `[CmdletBinding()]` to all three functions.
 - Add `[ValidateNotNullOrEmpty()]` to `Message` parameters.
-- Remove the conflicting dual-switch timestamp model.
+- ✅ Remove the conflicting dual-switch timestamp model.
 	Use either parameter sets or a single parameter such as `-TimestampPosition Front|Back`.
 - Remove the pre-write `Test-Path` check and rely on the atomic append helper so existence checks do not race file creation/deletion.
+ - ✅ Add `[ValidateNotNullOrEmpty()]` to `Message` parameters.
+ - ✅ Remove the conflicting dual-switch timestamp model; use `-TimestampPosition Front|Back|None`.
+ - ✅ Remove the pre-write `Test-Path` check and rely on the atomic append helper so existence checks do not race file creation/deletion.
 
 ### ⏳ 4. Rework `Write-LogError` exit behavior
 
@@ -76,6 +85,9 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 	- `Write-Error` plus `return`
 - Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
 - Revisit pipeline support so it is either fully supported or removed.
+ - ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` and default exit behavior).
+ - Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
+ - Revisit pipeline support so it is either fully supported or removed.
 
 ## ⏳ Phase 2: Harden `Send-Log`
 

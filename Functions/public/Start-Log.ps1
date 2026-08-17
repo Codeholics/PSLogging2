@@ -99,10 +99,10 @@ function Start-Log {
         try {
             Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator
         } catch {
-            Write-Error "Failed to initialize log header/separator atomically: $($_.Exception.Message)"
+            throw "Failed to initialize log header/separator atomically: $($_.Exception.Message)"
         }
     } catch {
-        Write-Error "Failed to write initial headers: $($_.Exception.Message)"
+        throw "Failed to write initial headers: $($_.Exception.Message)"
     }
 
     if ($ToScreen) {
