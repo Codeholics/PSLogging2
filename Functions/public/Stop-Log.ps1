@@ -22,16 +22,31 @@
 function Stop-Log {
     [CmdletBinding()]
     param(
-        [string]$LogPath = $script:currentLogPath,
-        [switch]$NoExit,
-        [switch]$ToScreen
+        [object]
+        $LogContext,
+        [string]
+        $LogPath,
+        [switch]
+        $NoExit,
+        [switch]
+        $ToScreen
     )
+
+    # Determine effective LogPath
+    if ($null -ne $LogContext -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
+        $LogPath = $LogContext.LogPath
+    }
 
     if ($null -eq $LogPath) { return }
 
-    if ($null -ne $script:LogStopwatch) {
-        $script:LogStopwatch.Stop()
-        $elapsed = $script:LogStopwatch.Elapsed
+    # Determine elapsed using provided LogContext.Stopwatch if available
+    if ($null -ne $LogContext -and ($LogContext.PSObject.Properties.Name -contains 'Stopwatch')) {
+        try {
+            $LogContext.Stopwatch.Stop()
+            $elapsed = $LogContext.Stopwatch.Elapsed
+        } catch {
+            $elapsed = [Timespan]::Zero
+        }
     } else {
         $elapsed = [Timespan]::Zero
     }
@@ -50,7 +65,7 @@ function Stop-Log {
     $footer = $footerLines -join "`r`n"
 
     try {
-        Append-LogAtomic -Path $LogPath -Value $footer -MaxRetries 8 -RetryDelayMs 200 | Out-Null
+        Append-LogAtomic -Path $LogPath -Value $footer | Out-Null
     } catch {
         Write-Error "Failed to write footer to log '$LogPath': $($_.Exception.Message)"
     }
@@ -59,9 +74,7 @@ function Stop-Log {
         Write-Host "Log finished: $LogPath" -ForegroundColor Cyan
     }
 
-    # Clear script-scope state
-    if ($null -ne $script:LogStopwatch) { Remove-Variable -Scope Script -Name LogStopwatch -ErrorAction SilentlyContinue }
-    if ($null -ne $script:currentLogPath) { Remove-Variable -Scope Script -Name currentLogPath -ErrorAction SilentlyContinue }
+    # No script-scoped state to clear (module uses explicit LogContext)
 
     # By default exit unless -NoExit was supplied
     if (-not $NoExit) {

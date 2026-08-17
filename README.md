@@ -54,11 +54,12 @@ Import-Module PSLogging2
 ```powershell
 Import-Module .\PSLogging2.psm1 -Force
 
-Start-Log -Style Simple -LogDir .\log -Title 'Inventory Script' -Version '1.0' -ToScreen
-Write-LogInfo -Message 'Starting run'
-Write-LogWarning -Message 'Using fallback configuration' -TimestampPosition Front
-Write-LogInfo -Message 'Completed step 1' -TimestampPosition Back
-Stop-Log -ToScreen
+# Explicit LogContext pattern (recommended)
+`$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Inventory Script' -Version '1.0' -ToScreen -ReturnContext
+Write-LogInfo -Message 'Starting run' -LogContext `$ctx
+Write-LogWarning -Message 'Using fallback configuration' -TimestampPosition Front -LogContext `$ctx
+Write-LogInfo -Message 'Completed step 1' -TimestampPosition Back -LogContext `$ctx
+Stop-Log -LogContext `$ctx
 ```
 
 ## Log Styles
@@ -102,27 +103,27 @@ When the file already exists, the module appends a run separator unless `-Disabl
 ### Standard logging
 
 ```powershell
-Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -Version '2.3'
-Write-LogInfo -Message 'Job started'
-Write-LogInfo -Message 'Import complete' -TimestampPosition Back
-Stop-Log
+`$ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -Version '2.3' -ReturnContext
+Write-LogInfo -Message 'Job started' -LogContext `$ctx
+Write-LogInfo -Message 'Import complete' -TimestampPosition Back -LogContext `$ctx
+Stop-Log -LogContext `$ctx
 ```
 
 ### Daily logging
 
 ```powershell
-Start-Log -Style Daily -LogDir .\log -Title 'Daily Sync'
-Write-LogInfo -Message 'Sync started' -TimestampPosition Front
-Write-LogWarning -Message 'Remote system responded slowly'
-Stop-Log
+`$ctx = Start-Log -Style Daily -LogDir .\log -Title 'Daily Sync' -ReturnContext
+Write-LogInfo -Message 'Sync started' -TimestampPosition Front -LogContext `$ctx
+Write-LogWarning -Message 'Remote system responded slowly' -LogContext `$ctx
+Stop-Log -LogContext `$ctx
 ```
 
 ### Error logging
 
 ```powershell
-Start-Log -Style Simple -LogDir .\log -Title 'Deployment'
-Write-LogError -Message 'Deployment failed' -TimestampPosition Back -ToScreen
-Stop-Log
+`$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Deployment' -ReturnContext
+Write-LogError -Message 'Deployment failed' -TimestampPosition Back -ToScreen -LogContext `$ctx
+Stop-Log -LogContext `$ctx
 ```
 
 ## Timestamp Behavior
@@ -132,6 +133,8 @@ Timestamps are optional and controlled by the `-TimestampPosition` parameter.
 - `-TimestampPosition None` (default): message is written as-is
 - `-TimestampPosition Front`: timestamp is prepended
 - `-TimestampPosition Back`: timestamp is appended
+
+This behavior is covered by Pester tests for `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`, including invalid value rejection.
 
 Example:
 
@@ -173,9 +176,11 @@ Set-Location .\Tests
 `Send-Log` sends the full log body through .NET `SmtpClient`.
 
 ```powershell
+# Using explicit LogContext (preferred)
+`$ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -ReturnContext
 Send-Log `
 	-SMTPServer 'smtp.example.com' `
-	-LogPath .\log\2026\2026-08\2026-08-15.log `
+	-LogContext `$ctx `
 	-EmailFrom 'me@example.com' `
 	-EmailTo 'team@example.com' `
 	-EmailSubject 'Nightly Job Log'
@@ -189,7 +194,7 @@ Notes:
 
 ## Current Limitations
 
-- Writer functions use script-scoped module state (consider moving to explicit context)
+- Writer functions now prefer explicit `LogContext` objects returned by `Start-Log -ReturnContext` or created with `New-LogContext`.
 - `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling)
 - Pipeline support for `Write-LogError` is not fully implemented and may be removed or revised
 
@@ -198,6 +203,20 @@ Notes:
 - Timestamp switches were replaced with `-TimestampPosition` and writer functions now validate `Message` input.
 
 ## Development
+
+### Run the Pester suite
+
+```powershell
+Import-Module .\PSLogging2.psm1 -Force
+Invoke-Pester .\Tests\Pester
+```
+
+### Run only the timestamp tests
+
+```powershell
+Import-Module .\PSLogging2.psm1 -Force
+Invoke-Pester .\Tests\Pester\Timestamp.Tests.ps1
+```
 
 ### Run the concurrency test
 

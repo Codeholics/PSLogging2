@@ -11,15 +11,15 @@ Describe "Stop-Log and Write-LogError integration" {
         $scriptLines = @(
     "`$moduleRoot = (Resolve-Path (Join-Path `$PSScriptRoot '..\\..\\..')).Path",
     "Import-Module (Join-Path `$moduleRoot 'PSLogging2.psm1') -Force",
-    "Start-Log -Style Simple -LogDir '$logDir' -Title 'Pester StopLog Test' -ToScreen",
-    "Write-LogInfo -Message 'step'",
-    "Stop-Log -NoExit",
+    "`$ctx = Start-Log -Style Simple -LogDir '$logDir' -Title 'Pester StopLog Test' -ToScreen -ReturnContext",
+    "Write-LogInfo -Message 'step' -LogContext `$ctx",
+    "Stop-Log -LogContext `$ctx -NoExit",
     "Exit 0"
         )
         $scriptLines | Set-Content -Path $scriptPath -Encoding UTF8
 
         $p = Start-Process -FilePath pwsh -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File', $scriptPath -PassThru -Wait
-        $logFile = Get-ChildItem -Path $logDir -Recurse | Where-Object { $_.Extension -eq '.log' } | Select-Object -First 1
+        $logFile = Get-ChildItem -Path $logDir -Recurse -File | Where-Object { $_.Extension -eq '.log' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         $content = Get-Content -Path $logFile.FullName -Raw
         ($content -match 'Finished at:') | Should Be $true
         ($content -match 'Total Execution Time:') | Should Be $true
@@ -31,13 +31,13 @@ Describe "Stop-Log and Write-LogError integration" {
         $scriptLines = @(
     "`$moduleRoot = (Resolve-Path (Join-Path `$PSScriptRoot '..\\..\\..')).Path",
     "Import-Module (Join-Path `$moduleRoot 'PSLogging2.psm1') -Force",
-    "Start-Log -Style Simple -LogDir '$logDir' -Title 'Pester WriteLogError Test' -ToScreen",
-    "Write-LogError -Message 'fatal' -TimestampPosition Back -ExitGracefully"
+    "`$ctx = Start-Log -Style Simple -LogDir '$logDir' -Title 'Pester WriteLogError Test' -ToScreen -ReturnContext",
+    "Write-LogError -Message 'fatal' -TimestampPosition Back -ExitGracefully -LogContext `$ctx"
         )
         $scriptLines | Set-Content -Path $scriptPath -Encoding UTF8
 
         $p = Start-Process -FilePath pwsh -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File', $scriptPath -PassThru -Wait
-        $logFile = Get-ChildItem -Path $logDir -Recurse | Where-Object { $_.Extension -eq '.log' } | Select-Object -First 1
+        $logFile = Get-ChildItem -Path $logDir -Recurse -File | Where-Object { $_.Extension -eq '.log' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         $content = Get-Content -Path $logFile.FullName -Raw
         ($content -match 'Finished at:') | Should Be $true
         ($content -match 'Total Execution Time:') | Should Be $true

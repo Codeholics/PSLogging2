@@ -90,6 +90,36 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
  - ⏳ Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
  - ⏳ Revisit pipeline support so it is either fully supported or removed.
 
+### 🔁 Migration: Removing script-scope state
+
+- The module no longer sets or relies on `$script:currentLogPath` or `$script:LogStopwatch`. All public writers and `Send-Log` accept an explicit `-LogContext` (or `-LogPath`).
+- Callers must capture the context returned by `Start-Log -ReturnContext` or create one with `New-LogContext` and pass it to writer functions and `Stop-Log`.
+
+Example (before):
+
+```powershell
+# legacy implicit state
+Start-Log -Style Simple -LogDir .\log -Title 'Job'
+Write-LogInfo -Message 'step'
+Stop-Log
+```
+
+Example (after):
+
+```powershell
+# explicit LogContext
+`$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Job' -ReturnContext
+Write-LogInfo -Message 'step' -LogContext `$ctx
+Stop-Log -LogContext `$ctx
+```
+
+Migration steps:
+
+- Search your scripts for `Start-Log`/writers that rely on implicit script state and update to capture `-ReturnContext` and pass `-LogContext`.
+- Update automation and tests to use `-LogContext` or explicit `-LogPath`.
+- Run the Pester suite and smoke tests to validate behavior.
+
+
 ## ⏳ Phase 2: Harden `Send-Log`
 
 ### ⏳ 1. Fix SMTP behavior and validation
@@ -122,13 +152,19 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 	Right now the docs imply timestamps are appended by default, but the code only adds them when a timestamp switch is provided.
 - Review all function help text for parameters and examples so they match current behavior.
 - Continue pruning stale findings from `Docs/Review.md` as fixes land.
+ - ✅ Update `README.md` to match current timestamp behavior and explicit `LogContext` usage.
 
 ### ⏳ 2. Add focused validation coverage
 
  - ✅ Add a smoke test for `Stop-Log` footer writing.
  - ✅ Add a smoke test for `Write-LogError -ExitGracefully` once its behavior is redesigned.
- - ⏳ Add tests for timestamp option validation.
+ - ✅ Add tests for timestamp option validation.
  - ⏳ Add a test for `Send-Log` validation behavior.
+
+Recent verification:
+
+- ✅ `Tests/Pester/Timestamp.Tests.ps1` now covers `-TimestampPosition Front|Back|None` formatting and invalid value rejection.
+- ✅ Full `Tests/Pester` suite passes after the LogContext, Send-Log, concurrency, and timestamp test updates.
 
 ## ⏳ Deferred Architecture Work
 

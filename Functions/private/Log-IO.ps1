@@ -3,8 +3,8 @@ function Append-LogAtomic {
     param(
         [Parameter(Mandatory=$true)][string]$Path,
         [Parameter(Mandatory=$true)][string]$Value,
-        [int]$MaxRetries = 5,
-        [int]$RetryDelayMs = 200
+        [int]$MaxRetries = 20,
+        [int]$RetryDelayMs = 150
     )
 
     $bytes = [System.Text.Encoding]::UTF8.GetBytes("$Value`r`n")
@@ -23,7 +23,8 @@ function Append-LogAtomic {
             return $true
         } catch [System.IO.IOException] {
             if ($i -eq ($MaxRetries - 1)) { throw }
-            Start-Sleep -Milliseconds (Get-Random -Minimum 50 -Maximum ($RetryDelayMs * ($i + 1)))
+            $maxDelay = [Math]::Max(75, ($RetryDelayMs * ($i + 1)))
+            Start-Sleep -Milliseconds (Get-Random -Minimum 25 -Maximum $maxDelay)
         } catch {
             throw
         }
@@ -36,8 +37,8 @@ function Initialize-LogAtomic {
         [Parameter(Mandatory=$true)][ValidateSet('Standard','Simple','Daily')][string]$Style,
         [Parameter(Mandatory=$true)][string]$HeaderTitle,
         [switch]$DisableDailySeparator,
-        [int]$MaxRetries = 8,
-        [int]$RetryDelayMs = 200
+        [int]$MaxRetries = 20,
+        [int]$RetryDelayMs = 150
     )
 
     for ($i = 0; $i -lt $MaxRetries; $i++) {
@@ -71,7 +72,8 @@ $HeaderTitle
             return $true
         } catch [System.IO.IOException] {
             if ($i -eq ($MaxRetries - 1)) { throw }
-            Start-Sleep -Milliseconds (Get-Random -Minimum 50 -Maximum ($RetryDelayMs * ($i + 1)))
+            $maxDelay = [Math]::Max(75, ($RetryDelayMs * ($i + 1)))
+            Start-Sleep -Milliseconds (Get-Random -Minimum 25 -Maximum $maxDelay)
         } catch {
             throw
         }

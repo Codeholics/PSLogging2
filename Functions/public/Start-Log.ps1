@@ -47,11 +47,12 @@ function Start-Log {
         [string]$Title = "Script Log",
         [switch]$ToScreen,
         [string]$Version,
-        [switch]$DisableDailySeparator
+        [switch]$DisableDailySeparator,
+        [switch]$ReturnContext
     )
 
     # Initialize Timer
-    $script:LogStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $DateStamp = Get-Date
 
     if ($Style -eq "Standard") {
@@ -61,22 +62,22 @@ function Start-Log {
             $DateStamp.ToString("yyyy-MM"), 
             $DateStamp.ToString("yyyy-MM-dd_HHmmss")
         )
-        $script:currentLogPath = Join-Path -Path $logDir -ChildPath "$($pathParts[0])\$($pathParts[1])\$($pathParts[2]).log"
+        $logPath = Join-Path -Path $logDir -ChildPath "$($pathParts[0])\$($pathParts[1])\$($pathParts[2]).log"
     } elseif ($Style -eq "Simple") {
-        $script:currentLogPath = Join-Path -Path $logDir -ChildPath "$($DateStamp.ToString('yyyy-MM-dd_HHmmss')).log"
+        $logPath = Join-Path -Path $logDir -ChildPath "$($DateStamp.ToString('yyyy-MM-dd_HHmmss')).log"
     } elseif ($Style -eq "Daily") {
             $pathParts = @(
             $DateStamp.ToString("yyyy"), 
             $DateStamp.ToString("yyyy-MM"),
             $DateStamp.ToString("yyyy-MM-dd")
         )
-        $script:currentLogPath = Join-Path -Path $logDir -ChildPath "$($pathParts[0])\$($pathParts[1])\$($pathParts[2]).log"
+        $logPath = Join-Path -Path $logDir -ChildPath "$($pathParts[0])\$($pathParts[1])\$($pathParts[2]).log"
     } else {
         throw "Invalid Selection (Must choose style as standard, Simple, or Daily)"
     }
 
-    # We use one consistent variable: currentLogPath
-    $logPath = $script:currentLogPath
+    # Use the computed log path
+    # $logPath already populated above
 
     try {
         $parentDir = Split-Path -Path $logPath -Parent
@@ -100,7 +101,7 @@ function Start-Log {
 
         # Initialize header or separator using an exclusive lock to avoid concurrent write races
         try {
-            Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator
+            Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator | Out-Null
         } catch {
             throw "Failed to initialize log header/separator atomically: $($_.Exception.Message)"
         }
@@ -110,5 +111,13 @@ function Start-Log {
 
     if ($ToScreen) {
         Write-Host "Log Created: [$($logPath)] | Date: [$($DateStamp)]" -ForegroundColor Cyan
+    }
+
+    if ($ReturnContext) {
+        return [PSCustomObject]@{
+            LogPath = $logPath
+            Started = $DateStamp
+            Stopwatch = $stopwatch
+        }
     }
 }
