@@ -1,28 +1,28 @@
 $CPScriptRoot = (Split-Path -Parent $PSScriptRoot)
 Import-Module (Join-Path -Path $CPScriptRoot -ChildPath "PSLogging2.psm1") -Force
 
-Start-Log `
+$ctx = Start-Log `
     -Style "Standard" `
     -Title "Sample Logging Test" `
     -LogDir (Join-Path -Path $CPScriptRoot -ChildPath "log") `
     -ToScreen `
-    -Version "1.0"
+    -Version "1.0" -ReturnContext
 
-Write-LogInfo -Message "This was a test" -ToScreen
-Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Back
-Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Front
-Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Front
+Write-LogInfo -Message "This was a test" -ToScreen -LogContext $ctx
+Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Back -LogContext $ctx
+Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Front -LogContext $ctx
+Write-LogInfo -Message "Another test message" -ToScreen -TimestampPosition Front -LogContext $ctx
 
-Write-LogError -message "hello" -TimestampPosition Back -ToScreen
-Write-LogError -message "hello" -TimestampPosition Front -ToScreen
-Write-LogError -message "hello" -TimestampPosition Back -ToScreen
+Write-LogError -message "hello" -TimestampPosition Back -ToScreen -LogContext $ctx
+Write-LogError -message "hello" -TimestampPosition Front -ToScreen -LogContext $ctx
+Write-LogError -message "hello" -TimestampPosition Back -ToScreen -LogContext $ctx
 
-Write-LogError -message "hello" -TimestampPosition Back -ToScreen -ExitGracefully
+Write-LogError -message "hello" -TimestampPosition Back -ToScreen -ExitGracefully -LogContext $ctx
 
-Write-LogWarning -Message "This is a warning" -TimestampPosition 'back' -ToScreen
+Write-LogWarning -Message "This is a warning" -TimestampPosition Back -ToScreen -LogContext $ctx
 # Send-Log -SMTPServer "smtp.example.com" -LogPath (Join-Path $PSScriptRoot 'log\2026\2026-08\A.log') -EmailFrom "me@example.com" -EmailTo "you@example.com" -EmailSubject "Log test"
 
 
 
 
-Stop-Log
+Stop-Log -LogContext $ctx

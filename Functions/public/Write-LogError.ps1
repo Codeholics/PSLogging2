@@ -10,21 +10,25 @@
 .PARAMETER Message
     The error message text to append.
 
+.PARAMETER TimestampPosition
+    Controls timestamp placement. Accepts `Front`, `Back`, or `None` (default).
+
 .PARAMETER TimeStampFront
-    When specified, place the timestamp at the beginning of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Front` instead.
 
 .PARAMETER TimeStampBack
-    When specified, place the timestamp at the end of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Back` instead.
 
 .PARAMETER ExitGracefully
-    If specified, `Stop-Log` is executed (writes footer) and the script exits
-    with exit code 1 after the error is logged.
+    If specified, `Stop-Log` is executed (writes footer) and the calling
+    process will exit by default; pass `-NoExit` to `Stop-Log` to suppress
+    exiting.
 
 .PARAMETER ToScreen
     When specified, also write the formatted error to the host.
 
 .EXAMPLE
-    Write-LogError -Message 'Fatal failure' -TimeStampBack -ExitGracefully
+    Write-LogError -Message 'Fatal failure' -TimestampPosition Back -ExitGracefully
 #>
 function Write-LogError {
     [CmdletBinding()]
@@ -32,10 +36,38 @@ function Write-LogError {
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Message,
         [ValidateSet('Front','Back','None')][string]$TimestampPosition = 'None',
         [switch]$ExitGracefully,
-        [switch]$ToScreen
+        [switch]$ToScreen,
+        [Parameter(Mandatory=$false)]
+        [object]
+        $LogContext,
+        [Parameter(Mandatory=$false)]
+        [string]
+        $LogPath
     )
 
-    $targetPath = $script:currentLogPath
+    # Determine target path from LogContext or explicit LogPath
+        # If an array/container was passed (e.g. previous pipeline outputs), pick the element that contains LogPath
+        if ($PSBoundParameters.ContainsKey('LogContext') -and $LogContext -is [System.Array]) {
+            $found = $null
+            foreach ($item in $LogContext) {
+                try {
+                    if ($item -is [System.Collections.IDictionary] -and $item.ContainsKey('LogPath')) { $found = $item; break }
+                    if ($item -ne $null -and ($item.PSObject.Properties.Name -contains 'LogPath')) { $found = $item; break }
+                } catch { }
+            }
+            if ($found -ne $null) { $LogContext = $found } elseif ($LogContext.Count -gt 0) { $LogContext = $LogContext[0] } else { $LogContext = $null }
+        }
+    if ($null -ne $LogContext) {
+        if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
+            $targetPath = $LogContext['LogPath']
+        } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
+            $targetPath = $LogContext.LogPath
+        }
+    } elseif ($PSBoundParameters.ContainsKey('LogPath') -and $LogPath) {
+        $targetPath = $LogPath
+    } else {
+        throw "Write-LogError requires -LogContext or -LogPath to be provided."
+    }
 
     if ($TimestampPosition -ne 'None') {
         $ts = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]"
@@ -46,17 +78,14 @@ function Write-LogError {
 
     if ($ToScreen) { Write-Host $line -ForegroundColor Red }
 
-    if ($null -ne $targetPath) {
-        try {
-            Append-LogAtomic -Path $targetPath -Value $line -MaxRetries 8 -RetryDelayMs 200 | Out-Null
-        } catch {
-            Write-Warning "Failed to append error to log: $($_.Exception.Message)"
-        }
-    } else {
-        Write-Warning "Cannot write error to log. Path is null."
+    try {
+        Append-LogAtomic -Path $targetPath -Value $line | Out-Null
+    } catch {
+        throw "Failed to append error to log: $($_.Exception.Message)"
     }
 
     if ($ExitGracefully) {
-        Stop-Log -LogPath $targetPath
+        if ($null -ne $LogContext) { Stop-Log -LogContext $LogContext }
+        else { Stop-Log -LogPath $targetPath }
     }
 }
