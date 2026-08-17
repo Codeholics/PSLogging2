@@ -6,19 +6,18 @@
     Writes footer information (finish time and elapsed time) to the current
     log file and optionally exits the calling script.
 
-.PARAMETER logPath
+.PARAMETER LogPath
     Optional explicit path to a log file. Defaults to the current log file
     initialized by `Start-Log`.
 
-    PARAMETER NoExit
+.PARAMETER NoExit
     When specified, `Stop-Log` will NOT exit the calling process after writing
-    footer data. By default `Stop-Log` will exit unless `-NoExit` is provided.
-
-.PARAMETER ToScreen
-    When specified, writes a short completion message to the host.
-
+    footer data. By default `Stop-Log` will exit the process unless `-NoExit`
+    is provided.
 .EXAMPLE
     Stop-Log -ToScreen
+
+    This example writes the footer information and then exits (default).
 #>
 function Stop-Log {
     [CmdletBinding()]

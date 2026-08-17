@@ -49,6 +49,7 @@ Status legend:
 - ✅ Fix the outdated inline comment on `Style` so it matches the supported values.
 - Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
  - ✅ Throw on header or initialization failure instead of only writing an error and continuing.
+ - ⏳ Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
 
 ### ⏳ 2. Harden `Stop-Log`
 
@@ -57,7 +58,7 @@ Status legend:
 - Replace multiple `Add-Content` calls with a single atomic footer write helper.
 - Clear script-scope state after completion (`$script:LogStopwatch`, `$script:currentLogPath`).
 - Improve elapsed time formatting for runs longer than 59 minutes.
-- Normalize parameter naming to match the rest of the module (`LogPath` instead of `logPath`).
+- ✅ Normalize parameter naming to match the rest of the module (`LogPath` instead of `logPath`).
  - ✅ Add error handling around footer writes.
  - ✅ Replace multiple `Add-Content` calls with a single atomic footer write helper.
  - ✅ Clear script-scope state after completion (`$script:LogStopwatch`, `$script:currentLogPath`).
@@ -86,8 +87,8 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 - Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
 - Revisit pipeline support so it is either fully supported or removed.
  - ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` and default exit behavior).
- - Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
- - Revisit pipeline support so it is either fully supported or removed.
+ - ⏳ Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
+ - ⏳ Revisit pipeline support so it is either fully supported or removed.
 
 ## ⏳ Phase 2: Harden `Send-Log`
 
@@ -124,10 +125,10 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 
 ### ⏳ 2. Add focused validation coverage
 
-- Add a smoke test for `Stop-Log` footer writing.
-- Add a smoke test for `Write-LogError -ExitGracefully` once its behavior is redesigned.
-- Add tests for timestamp option validation.
-- Add a test for `Send-Log` validation behavior.
+ - ✅ Add a smoke test for `Stop-Log` footer writing.
+ - ✅ Add a smoke test for `Write-LogError -ExitGracefully` once its behavior is redesigned.
+ - ⏳ Add tests for timestamp option validation.
+ - ⏳ Add a test for `Send-Log` validation behavior.
 
 ## ⏳ Deferred Architecture Work
 

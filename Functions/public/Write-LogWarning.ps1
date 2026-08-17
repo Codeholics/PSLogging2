@@ -9,17 +9,20 @@
 .PARAMETER Message
     The warning message text to append.
 
+.PARAMETER TimestampPosition
+    Controls timestamp placement. Accepts `Front`, `Back`, or `None` (default).
+
 .PARAMETER TimeStampFront
-    When specified, place the timestamp at the beginning of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Front` instead.
 
 .PARAMETER TimeStampBack
-    When specified, place the timestamp at the end of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Back` instead.
 
 .PARAMETER ToScreen
     When specified, also write the formatted warning to the host.
 
 .EXAMPLE
-    Write-LogWarning -Message 'Configuration deprecated' -TimeStampBack
+    Write-LogWarning -Message 'Configuration deprecated' -TimestampPosition Back
 #>
 function Write-LogWarning {
     [CmdletBinding()]

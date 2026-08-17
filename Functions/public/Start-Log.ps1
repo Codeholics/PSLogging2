@@ -33,6 +33,9 @@
 
 .NOTES
     All files and header content are written using UTF-8 encoding.
+
+    The cmdlet will throw on header or initialization failures so callers can
+    handle failures instead of the module silently continuing.
 #>
 function Start-Log {
     [CmdletBinding()]

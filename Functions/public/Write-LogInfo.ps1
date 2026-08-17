@@ -9,17 +9,20 @@
 .PARAMETER Message
     The message text to append to the log.
 
+.PARAMETER TimestampPosition
+    Controls timestamp placement. Accepts `Front`, `Back`, or `None` (default).
+
 .PARAMETER TimeStampFront
-    When specified, place the timestamp at the beginning of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Front` instead.
 
 .PARAMETER TimeStampBack
-    When specified, place the timestamp at the end of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Back` instead.
 
 .PARAMETER ToScreen
     When specified, also write the formatted message to the host.
 
 .EXAMPLE
-    Write-LogInfo -Message 'Processing item' -TimeStampFront
+    Write-LogInfo -Message 'Processing item' -TimestampPosition Front
 #>
 function Write-LogInfo {
     [CmdletBinding()]

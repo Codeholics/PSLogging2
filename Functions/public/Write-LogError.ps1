@@ -10,21 +10,25 @@
 .PARAMETER Message
     The error message text to append.
 
+.PARAMETER TimestampPosition
+    Controls timestamp placement. Accepts `Front`, `Back`, or `None` (default).
+
 .PARAMETER TimeStampFront
-    When specified, place the timestamp at the beginning of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Front` instead.
 
 .PARAMETER TimeStampBack
-    When specified, place the timestamp at the end of the message.
+    (Deprecated) Old switch. Use `-TimestampPosition Back` instead.
 
 .PARAMETER ExitGracefully
-    If specified, `Stop-Log` is executed (writes footer) and the script exits
-    with exit code 1 after the error is logged.
+    If specified, `Stop-Log` is executed (writes footer) and the calling
+    process will exit by default; pass `-NoExit` to `Stop-Log` to suppress
+    exiting.
 
 .PARAMETER ToScreen
     When specified, also write the formatted error to the host.
 
 .EXAMPLE
-    Write-LogError -Message 'Fatal failure' -TimeStampBack -ExitGracefully
+    Write-LogError -Message 'Fatal failure' -TimestampPosition Back -ExitGracefully
 #>
 function Write-LogError {
     [CmdletBinding()]

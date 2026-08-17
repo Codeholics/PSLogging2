@@ -19,7 +19,7 @@ Write-LogError -message "hello" -TimestampPosition Back -ToScreen
 
 Write-LogError -message "hello" -TimestampPosition Back -ToScreen -ExitGracefully
 
-Write-LogWarning -Message "This is a warning" -TimestampPosition 'back' -ToScreen
+Write-LogWarning -Message "This is a warning" -TimestampPosition Back -ToScreen
 # Send-Log -SMTPServer "smtp.example.com" -LogPath (Join-Path $PSScriptRoot 'log\2026\2026-08\A.log') -EmailFrom "me@example.com" -EmailTo "you@example.com" -EmailSubject "Log test"
 
 
