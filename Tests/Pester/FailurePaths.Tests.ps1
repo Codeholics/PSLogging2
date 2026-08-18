@@ -1,5 +1,10 @@
 Describe 'Failure paths' {
 
+    BeforeAll {
+        $root = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+        Import-Module (Join-Path -Path (Resolve-Path (Join-Path $root '..\..')).Path -ChildPath 'PSLogging2.psm1') -Force
+    }
+
     It 'throws after retry exhaustion when file is exclusively locked' {
         $path = Join-Path $env:TEMP ([guid]::NewGuid().ToString() + '.log')
         New-Item -Path $path -ItemType File -Force | Out-Null
