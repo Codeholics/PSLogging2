@@ -11,17 +11,17 @@ Status legend:
 
 ## Roadmap
 
-### 🚧 Milestone 1: Reliability baseline
+### ✅ Milestone 1: Reliability baseline
 
 - ✅ Finish the remaining correctness work in `Start-Log`, `Stop-Log`, and the writer functions.
 - ✅ Remove unsafe control-flow patterns such as `Exit 1` inside reusable module code.
-- 🚧 Standardize validation and error handling across the module.
+- ✅ Standardize validation and error handling across the module.
 
-### ⏳ Milestone 2: Operational hardening
+### 🚧 Milestone 2: Operational hardening
 
-- ⏳ Improve `Send-Log` reliability, validation, disposal, and large-log handling.
-- ⏳ Reduce remaining script-scope and lifecycle risks.
-- ⏳ Add tests for the core logging lifecycle and failure paths.
+- 🚧 Improve `Send-Log` reliability, validation, disposal, and large-log handling.
+- 🚧 Reduce remaining script-scope and lifecycle risks.
+- 🚧 Add tests for the core logging lifecycle and failure paths.
 
 ### ⏳ Milestone 3: Documentation and UX cleanup
 
@@ -32,7 +32,7 @@ Status legend:
 ### ⏳ Milestone 4: Architecture decisions
 
 - ✅ Keep explicit `LogContext`/`LogPath` state as the long-term design; do not reintroduce module-wide script state.
-- ⏳ Decide whether parallel runspace support is a target feature or out of scope.
+- ⏳ Decide whether parallel run space support is a target feature or out of scope.
 - ⏳ Use those decisions to shape any broader refactor.
 
 ### ⏳ Milestone 5: Future enhancements
@@ -104,29 +104,28 @@ Migration steps:
 - Run the Pester suite and smoke tests to validate behavior.
 
 
-## ⏳ Phase 2: Harden `Send-Log`
+## 🚧 Phase 2: Harden `Send-Log`
 
-### ⏳ 1. Fix SMTP behavior and validation
+### 🚧 1. Fix remaining SMTP behavior and validation
 
-- Add `[ValidateNotNullOrEmpty()]` to `LogPath`, `EmailFrom`, `EmailTo`, and `EmailSubject`.
-- Set SMTP timeout before calling `.Send()`.
-- Dispose the SMTP client reliably.
-- Standardize the error-handling strategy instead of mixing `Write-Error` with boolean return values.
+- 🚧 Add `[ValidateNotNullOrEmpty()]` to `LogPath`, `EmailFrom`, `EmailTo`, and `EmailSubject`.
+- ✅ Set SMTP timeout before calling `.Send()`.
+- ✅ Dispose the SMTP client reliably.
+- 🚧 Decide whether `Send-Log` should throw on failure or continue returning `$false` with an error record.
 
 ### ⏳ 2. Improve message handling
 
-- Decide whether `EmailTo` should remain a single string or become `[string[]]` with a `MailMessage` object.
-- Decide how to handle large logs.
-	Options:
-	- Attach the file instead of embedding it
-	- Enforce a size limit
-	- Truncate with a notice
-- Document or implement a redaction strategy for secrets before emailing logs.
+- 🚧 Decide whether `EmailTo` should remain a single string or become `[string[]]` with a `MailMessage` object.
+- 🚧 Decide how to handle large logs. Options:
+  - Attach the file instead of embedding it
+  - Enforce a size limit
+  - Truncate with a notice
+- 🚧 Document or implement a redaction strategy for secrets before emailing logs.
 
-### ⏳ 3. Plan for auth modernization
+### 🚧 3. Plan for auth modernization
 
-- Document that `SmtpClient` is legacy and define the upgrade path.
-- Evaluate whether modern auth support belongs in this module or a separate mail transport layer.
+- 🚧 Document that `SmtpClient` is legacy and define the upgrade path.
+- 🚧 Evaluate whether modern auth support belongs in this module or a separate mail transport layer.
 
 ## ⏳ Phase 3: Align Documentation And Tests
 
@@ -149,10 +148,10 @@ Migration steps:
 
 #### ⏳ Failure Path Testing
 
-- ⏳ Add tests for retry exhaustion in `Append-LogAtomic`.
-- ⏳ Add tests for invalid or malformed `LogContext` objects.
-- ⏳ Add tests for underlying append failures in writer functions.
-- ⏳ Add tests for `Send-Log` SMTP exceptions.
+- ✅ Add retry-exhaustion coverage for `Append-LogAtomic`.
+- ✅ Add invalid or malformed `LogContext` coverage.
+- ✅ Add underlying append-failure coverage for writer functions.
+- ✅ Add `Send-Log` SMTP-exception coverage.
 - ⏳ Add tests for log directory creation failures.
 
 #### ⏳ Concurrency Integrity Validation
@@ -187,7 +186,7 @@ Validate:
 Recent verification:
 
 - ✅ `Tests/Pester/Timestamp.Tests.ps1` now covers `-TimestampPosition Front|Back|None` formatting and invalid value rejection.
-- ✅ Full `Tests/Pester` suite passes after the LogContext, Send-Log, concurrency, and timestamp test updates.
+- ✅ Full `Tests/Pester` suite passes: 12 passed, 0 failed.
 
 ## Additional Atomic Logging Validation
 
@@ -230,7 +229,7 @@ Validate behavior with:
 
 ## ⏳ Internal Architecture Improvements
 
-### ⏳ Centralize LogPath Resolution
+### ✅ Centralize LogPath Resolution
 
 The following functions currently contain duplicate LogContext-to-LogPath resolution logic:
 
@@ -239,7 +238,7 @@ The following functions currently contain duplicate LogContext-to-LogPath resolu
 - `Write-LogError`
 - `Send-Log`
 
-Evaluate creating a private helper:
+Implemented private helper:
 
 ```powershell
 Resolve-LogPath
@@ -252,11 +251,11 @@ Benefits:
 - Provides consistent path resolution behavior
 - Makes future enhancements easier
 
-### ⏳ Standardize Exception Message Formatting
+### ✅ Standardize Exception Message Formatting
 
 Several functions currently generate exception messages independently.
 
-Evaluate creating a private helper:
+Implemented private helper:
 
 ```powershell
 New-LogExceptionMessage
@@ -269,9 +268,9 @@ Benefits:
 - Better GitHub issue reporting
 - Clearer production logging failures
 
-### ⏳ Establish Private Helper Structure
+### ✅ Establish Private Helper Structure
 
-Consider organizing reusable internal functionality within a dedicated private folder structure.
+Reusable internal functionality is organized in the private folder.
 
 Example:
 
