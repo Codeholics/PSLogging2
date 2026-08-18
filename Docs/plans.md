@@ -293,7 +293,7 @@ Benefits:
 
 - ⏳ **Structured Logging:** Add a `-Json` switch. Instead of plain text, output logs as JSON objects to allow for easier ingestion by tools like Splunk, ELK Stack, or Azure Monitor.
 - ⏳ **Configuration Files:** Implement `.json` or `.xml` configuration files, so users don't have to pass long parameter strings every time they call the function.
-- ✅ **Pester Test(s):** A great method to unit test the function to help identity bugs and resolve them.
+- ✅ **Pester Test(s):** A great method to unit test the function to help identify bugs and resolve them.
 - ⏳ **Teams Webhook:** Get notified via Microsoft Teams when an error is logged or automation completed
 - ⏳ **ServiceNow Incident:** Create a ServiceNow Incident if an error is logged
 - ⏳ **Email through Graph:** `Send-Logs` via Email with Graph (as an option) because Graph is becoming more popular for IT teams to send automated emails in a Microsoft environment.
