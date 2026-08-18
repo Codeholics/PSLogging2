@@ -19,7 +19,7 @@
 .PARAMETER TimeStampBack
     (Deprecated) Old switch. Use `-TimestampPosition Back` instead.
 
-.PARAMETER ExitGracefully
+@PARAMETER ExitGracefully
     If specified, `Stop-Log` is executed (writes footer) and the calling
     process will exit if `Stop-Log -Exit` is used. `Stop-Log` does not exit by
     default; `-Exit` is required to terminate the caller.

@@ -54,12 +54,12 @@ Import-Module PSLogging2
 ```powershell
 Import-Module .\PSLogging2.psm1 -Force
 
-# Explicit LogContext pattern (recommended)
-`$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Inventory Script' -Version '1.0' -ToScreen -ReturnContext
-Write-LogInfo -Message 'Starting run' -LogContext `$ctx
-Write-LogWarning -Message 'Using fallback configuration' -TimestampPosition Front -LogContext `$ctx
-Write-LogInfo -Message 'Completed step 1' -TimestampPosition Back -LogContext `$ctx
-Stop-Log -LogContext `$ctx
+# Explicit LogContext pattern
+$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Inventory Script' -Version '1.0' -ToScreen -ReturnContext
+Write-LogInfo -Message 'Starting run' -LogContext $ctx
+Write-LogWarning -Message 'Using fallback configuration' -TimestampPosition Front -LogContext $ctx
+Write-LogInfo -Message 'Completed step 1' -TimestampPosition Back -LogContext $ctx
+Stop-Log -LogContext $ctx
 ```
 
 ## Log Styles
@@ -103,27 +103,27 @@ When the file already exists, the module appends a run separator unless `-Disabl
 ### Standard logging
 
 ```powershell
-`$ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -Version '2.3' -ReturnContext
-Write-LogInfo -Message 'Job started' -LogContext `$ctx
-Write-LogInfo -Message 'Import complete' -TimestampPosition Back -LogContext `$ctx
-Stop-Log -LogContext `$ctx
+$ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -Version '2.3' -ReturnContext
+Write-LogInfo -Message 'Job started' -LogContext $ctx
+Write-LogInfo -Message 'Import complete' -TimestampPosition Back -LogContext $ctx
+Stop-Log -LogContext $ctx
 ```
 
 ### Daily logging
 
 ```powershell
-`$ctx = Start-Log -Style Daily -LogDir .\log -Title 'Daily Sync' -ReturnContext
-Write-LogInfo -Message 'Sync started' -TimestampPosition Front -LogContext `$ctx
-Write-LogWarning -Message 'Remote system responded slowly' -LogContext `$ctx
-Stop-Log -LogContext `$ctx
+$ctx = Start-Log -Style Daily -LogDir .\log -Title 'Daily Sync' -ReturnContext
+Write-LogInfo -Message 'Sync started' -TimestampPosition Front -LogContext $ctx
+Write-LogWarning -Message 'Remote system responded slowly' -LogContext $ctx
+Stop-Log -LogContext $ctx
 ```
 
 ### Error logging
 
 ```powershell
-`$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Deployment' -ReturnContext
-Write-LogError -Message 'Deployment failed' -TimestampPosition Back -ToScreen -LogContext `$ctx
-Stop-Log -LogContext `$ctx
+$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Deployment' -ReturnContext
+Write-LogError -Message 'Deployment failed' -TimestampPosition Back -ToScreen -LogContext $ctx
+Stop-Log -LogContext $ctx
 ```
 
 ## Timestamp Behavior
@@ -153,6 +153,7 @@ Write-LogWarning -Message 'Retrying request' -TimestampPosition Back
 | `Write-LogError` | Appends error messages and can optionally stop execution |
 | `Stop-Log` | Writes footer information and returns a status; use `-Exit` to terminate the caller |
 | `Send-Log` | Emails a completed log file through SMTP |
+| `New-LogContext` | Creates an explicit context when a log path already exists |
 
 ## Concurrency
 
@@ -176,11 +177,11 @@ Set-Location .\Tests
 `Send-Log` sends the full log body through .NET `SmtpClient`.
 
 ```powershell
-# Using explicit LogContext (preferred)
-`$ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -ReturnContext
+# Using explicit LogContext
+$ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -ReturnContext
 Send-Log `
 	-SMTPServer 'smtp.example.com' `
-	-LogContext `$ctx `
+	-LogContext $ctx `
 	-EmailFrom 'me@example.com' `
 	-EmailTo 'team@example.com' `
 	-EmailSubject 'Nightly Job Log'
@@ -194,13 +195,13 @@ Notes:
 
 ## Current Limitations
 
-- Writer functions now prefer explicit `LogContext` objects returned by `Start-Log -ReturnContext` or created with `New-LogContext`.
+- Writers and `Send-Log` require a single explicit `LogContext` returned by `Start-Log -ReturnContext` or created with `New-LogContext`, or an explicit `-LogPath`.
 - `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling)
-- Pipeline support for `Write-LogError` is not fully implemented and may be removed or revised
+- Pipeline input is not supported for `LogContext`; pass a single context or path per command.
 
-- Notes:
 - `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller.
-- Timestamp switches were replaced with `-TimestampPosition` and writer functions now validate `Message` input.
+- `Write-LogError -ExitGracefully` writes the footer and exits the calling process after a successful error entry.
+- Timestamp switches were replaced with `-TimestampPosition`, and writer functions validate `Message` input.
 
 ## Development
 

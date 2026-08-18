@@ -7,21 +7,56 @@ Describe 'Failure paths' {
 
     It 'throws after retry exhaustion when file is exclusively locked' {
         $path = Join-Path $env:TEMP ([guid]::NewGuid().ToString() + '.log')
-        New-Item -Path $path -ItemType File -Force | Out-Null
+        $module = Get-Module PSLogging2
 
-        # Use a directory path to force failure when trying to open as a file
-        Remove-Item -Path $path -Force -ErrorAction SilentlyContinue
-        New-Item -Path $path -ItemType Directory | Out-Null
+        # Hold an exclusive handle so every atomic-append attempt fails.
+        $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
         try {
-            { Append-LogAtomic -Path $path -Value 'x' -MaxRetries 1 -RetryDelayMs 1 } | Should Throw
+            $exception = & $module {
+                param($targetPath)
+                try {
+                    Append-LogAtomic -Path $targetPath -Value 'x' -MaxRetries 3 -RetryDelayMs 1
+                } catch {
+                    $_
+                }
+            } $path
+
+            $exception | Should Not BeNullOrEmpty
         } finally {
-            Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+            $stream.Dispose()
+            Remove-Item -Path $path -Force -ErrorAction SilentlyContinue
         }
     }
 
-    It 'throws for malformed LogContext in Resolve-LogPath' {
-        # Missing both LogContext and LogPath should throw
-        { Write-LogInfo -Message 'm' } | Should Throw
+    It 'throws for a malformed LogContext in a writer' {
+        $context = [pscustomobject]@{ Invalid = 'context' }
+        $exception = $null
+
+        try {
+            Write-LogInfo -Message 'm' -LogContext $context -ErrorAction Stop
+        } catch {
+            $exception = $_
+        }
+
+        $exception | Should Not BeNullOrEmpty
+        $exception.Exception.Message | Should Match 'Invalid or missing LogPath'
+    }
+
+    It 'throws when a writer cannot append to the log' {
+        $path = Join-Path $env:TEMP ([guid]::NewGuid().ToString() + '.log')
+        $exception = $null
+        New-Item -Path $path -ItemType Directory | Out-Null
+
+        try {
+            Write-LogError -Message 'm' -LogPath $path -ErrorAction Stop
+        } catch {
+            $exception = $_
+        } finally {
+            Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        $exception | Should Not BeNullOrEmpty
+        $exception.Exception.Message | Should Match 'Failed to append error to log'
     }
 
     It 'returns false when SMTP client Send throws' {
@@ -38,7 +73,7 @@ Describe 'Failure paths' {
         $result = Send-Log -SMTPServer 'smtp.example' -LogPath $log -EmailFrom 'a@b' -EmailTo 'c@d' -EmailSubject 's'
         $result | Should Be $false
 
-        Assert-MockCalled -CommandName New-Object -Times 1
+        Assert-MockCalled -CommandName New-Object -ModuleName PSLogging2 -Times 1
         Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
     }
 
