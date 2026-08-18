@@ -151,7 +151,7 @@ Write-LogWarning -Message 'Retrying request' -TimestampPosition Back
 | `Write-LogInfo` | Appends informational messages |
 | `Write-LogWarning` | Appends warning messages |
 | `Write-LogError` | Appends error messages and can optionally stop execution |
-| `Stop-Log` | Writes footer information and exits by default (use `-NoExit` to prevent exiting) |
+| `Stop-Log` | Writes footer information and returns a status; use `-Exit` to terminate the caller |
 | `Send-Log` | Emails a completed log file through SMTP |
 
 ## Concurrency
@@ -198,8 +198,8 @@ Notes:
 - `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling)
 - Pipeline support for `Write-LogError` is not fully implemented and may be removed or revised
 
-Notes:
-- `Stop-Log` exits by default after writing the footer; pass `-NoExit` to prevent exiting.
+- Notes:
+- `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller.
 - Timestamp switches were replaced with `-TimestampPosition` and writer functions now validate `Message` input.
 
 ## Development

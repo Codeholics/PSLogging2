@@ -19,10 +19,10 @@
 .PARAMETER TimeStampBack
     (Deprecated) Old switch. Use `-TimestampPosition Back` instead.
 
-.PARAMETER ExitGracefully
+@PARAMETER ExitGracefully
     If specified, `Stop-Log` is executed (writes footer) and the calling
-    process will exit by default; pass `-NoExit` to `Stop-Log` to suppress
-    exiting.
+    process will exit if `Stop-Log -Exit` is used. `Stop-Log` does not exit by
+    default; `-Exit` is required to terminate the caller.
 
 .PARAMETER ToScreen
     When specified, also write the formatted error to the host.
@@ -85,7 +85,7 @@ function Write-LogError {
     }
 
     if ($ExitGracefully) {
-        if ($null -ne $LogContext) { Stop-Log -LogContext $LogContext }
-        else { Stop-Log -LogPath $targetPath }
+        if ($null -ne $LogContext) { Stop-Log -LogContext $LogContext -Exit }
+        else { Stop-Log -LogPath $targetPath -Exit }
     }
 }

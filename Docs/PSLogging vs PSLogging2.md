@@ -238,7 +238,8 @@ is forgotten.
 
 ### PSLogging2
 
-Still has an exit-oriented design, but:
+PSLogging2 avoids implicit process termination: `Stop-Log` returns a status and
+will only terminate the caller when explicitly requested via the `-Exit` switch.
 
 - Is documented
 - Is tested

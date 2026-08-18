@@ -1,6 +1,6 @@
 # PSLogging2 Implementation Plan
 
-This plan reflects the items still not resolved in `Docs/Review.md` after the recent concurrency and `Stop-Log` exit fixes.
+This plan reflects the items still not resolved after the recent concurrency and `Stop-Log` exit fixes.
 
 Status legend:
 
@@ -14,7 +14,7 @@ Status legend:
 ### 🚧 Milestone 1: Reliability baseline
 
 - 🚧 Finish the remaining correctness work in `Start-Log`, `Stop-Log`, and the writer functions.
-- ⏳ Remove unsafe control-flow patterns such as `Exit 1` inside reusable module code.
+- ✅ Remove unsafe control-flow patterns such as `Exit 1` inside reusable module code.
 - ⏳ Standardize validation and error handling across the module.
 
 ### ⏳ Milestone 2: Operational hardening
@@ -45,19 +45,13 @@ Status legend:
 ### 🚧 1. Harden `Start-Log`
 
 - ✅ Add `[CmdletBinding()]`.
-- Throw on header or initialization failure instead of only writing an error and continuing.
 - ✅ Fix the outdated inline comment on `Style` so it matches the supported values.
-- Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
- - ✅ Throw on header or initialization failure instead of only writing an error and continuing.
- - ⏳ Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
+- ⏳ Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
+- ✅ Throw on header or initialization failure instead of only writing an error and continuing.
 
-### ⏳ 2. Harden `Stop-Log`
+### ✅ 2. Harden `Stop-Log`
 
 - ✅ Add `[CmdletBinding()]`.
-- Add error handling around footer writes.
-- Replace multiple `Add-Content` calls with a single atomic footer write helper.
-- Clear script-scope state after completion (`$script:LogStopwatch`, `$script:currentLogPath`).
-- Improve elapsed time formatting for runs longer than 59 minutes.
 - ✅ Normalize parameter naming to match the rest of the module (`LogPath` instead of `logPath`).
  - ✅ Add error handling around footer writes.
  - ✅ Replace multiple `Add-Content` calls with a single atomic footer write helper.
@@ -65,30 +59,20 @@ Status legend:
  - ✅ Improve elapsed time formatting for runs longer than 59 minutes.
  - ✅ Normalize parameter naming to match the rest of the module (`LogPath` instead of `logPath`).
 
-### ⏳ 3. Harden log writer functions
+### ✅ 3. Harden log writer functions
 
 Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 
 - ✅ Add `[CmdletBinding()]` to all three functions.
-- Add `[ValidateNotNullOrEmpty()]` to `Message` parameters.
-- ✅ Remove the conflicting dual-switch timestamp model.
-	Use either parameter sets or a single parameter such as `-TimestampPosition Front|Back`.
-- Remove the pre-write `Test-Path` check and rely on the atomic append helper so existence checks do not race file creation/deletion.
+- ✅ Remove the conflicting dual-switch timestamp model. Use either parameter sets or a single parameter such as `-TimestampPosition Front|Back`.
  - ✅ Add `[ValidateNotNullOrEmpty()]` to `Message` parameters.
- - ✅ Remove the conflicting dual-switch timestamp model; use `-TimestampPosition Front|Back|None`.
  - ✅ Remove the pre-write `Test-Path` check and rely on the atomic append helper so existence checks do not race file creation/deletion.
 
 ### ⏳ 4. Rework `Write-LogError` exit behavior
 
-- Replace `Exit 1` with a caller-controlled failure pattern.
-	Preferred options:
-	- `throw`
-	- `Write-Error` plus `return`
-- Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
-- Revisit pipeline support so it is either fully supported or removed.
- - ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` and default exit behavior).
- - ⏳ Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
- - ⏳ Revisit pipeline support so it is either fully supported or removed.
+- ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` and default exit behavior).
+- ⏳ Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
+- ⏳ Revisit pipeline support so it is either fully supported or removed.
 
 ### 🔁 Migration: Removing script-scope state
 
@@ -148,21 +132,19 @@ Migration steps:
 
 ### ⏳ 1. Fix documentation drift
 
-- Update `README.md` to match current timestamp behavior.
-	Right now the docs imply timestamps are appended by default, but the code only adds them when a timestamp switch is provided.
-- Review all function help text for parameters and examples so they match current behavior.
-- Continue pruning stale findings from `Docs/Review.md` as fixes land.
+- Update `README.md` to match current timestamp behavior. Right now the docs imply timestamps are appended by default, but the code only adds them when a timestamp switch is provided.
+- ✅ Review all function help text for parameters and examples so they match current behavior.
  - ✅ Update `README.md` to match current timestamp behavior and explicit `LogContext` usage.
 
 ### ⏳ 2. Expand Validation Coverage
 
 #### ✅ Existing Coverage
 
-- ✅ Stop-Log footer writing
-- ✅ Write-LogError -ExitGracefully behavior
+- ✅ `Stop-Log` footer writing
+- ✅ `Write-LogError -ExitGracefully` behavior
 - ✅ Timestamp formatting and validation
 - ✅ LogContext workflow validation
-- ✅ Send-Log success-path validation
+- ✅ `Send-Log` success-path validation
 - ✅ Concurrent multi-process writes
 
 #### ⏳ Failure Path Testing
@@ -252,10 +234,10 @@ Validate behavior with:
 
 The following functions currently contain duplicate LogContext-to-LogPath resolution logic:
 
-- Write-LogInfo
-- Write-LogWarning
-- Write-LogError
-- Send-Log
+- `Write-LogInfo`
+- `Write-LogWarning`
+- `Write-LogError`
+- `Send-Log`
 
 Evaluate creating a private helper:
 
@@ -310,9 +292,9 @@ Benefits:
 ## ⏳ Future Enhancements
 
 - ⏳ **Structured Logging:** Add a `-Json` switch. Instead of plain text, output logs as JSON objects to allow for easier ingestion by tools like Splunk, ELK Stack, or Azure Monitor.
-- ⏳ **Configuration Files:** Implement `.json` or `.xml` configuration files so users don't have to pass long parameter strings every time they call the function.
+- ⏳ **Configuration Files:** Implement `.json` or `.xml` configuration files, so users don't have to pass long parameter strings every time they call the function.
 - ✅ **Pester Test(s):** A great method to unit test the function to help identity bugs and resolve them.
-- ⏳ **Teams Webhook:** Get notified via Microsoft teams when an error is logged or automation completed
+- ⏳ **Teams Webhook:** Get notified via Microsoft Teams when an error is logged or automation completed
 - ⏳ **ServiceNow Incident:** Create a ServiceNow Incident if an error is logged
-- ⏳ **Email through Graph:** Send-Logs via Email with Graph (as an option) because Graph is becoming more popular for IT teams to send automated emails in a Microsoft environment.
+- ⏳ **Email through Graph:** `Send-Logs` via Email with Graph (as an option) because Graph is becoming more popular for IT teams to send automated emails in a Microsoft environment.
 - ⏳ **Jenkins notifications:**: (This feature was recommended, but I am not sure of the exact use case)

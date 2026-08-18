@@ -10,10 +10,10 @@
     Optional explicit path to a log file. Defaults to the current log file
     initialized by `Start-Log`.
 
-.PARAMETER NoExit
-    When specified, `Stop-Log` will NOT exit the calling process after writing
-    footer data. By default `Stop-Log` will exit the process unless `-NoExit`
-    is provided.
+:PARAMETER Exit
+    When specified, `Stop-Log` will exit the calling process after writing
+    footer data. By default `Stop-Log` will NOT exit the calling process; callers
+    should decide whether to exit after `Stop-Log` returns.
 .EXAMPLE
     Stop-Log -ToScreen
 
@@ -22,14 +22,10 @@
 function Stop-Log {
     [CmdletBinding()]
     param(
-        [object]
-        $LogContext,
-        [string]
-        $LogPath,
-        [switch]
-        $NoExit,
-        [switch]
-        $ToScreen
+        [object]$LogContext,
+        [string]$LogPath,
+        [switch]$ToScreen,
+        [switch]$Exit
     )
 
     # Determine effective LogPath
@@ -74,10 +70,12 @@ function Stop-Log {
         Write-Host "Log finished: $LogPath" -ForegroundColor Cyan
     }
 
+    if ($Exit) {
+        Exit 0
+    }
+
     # No script-scoped state to clear (module uses explicit LogContext)
 
-    # By default exit unless -NoExit was supplied
-    if (-not $NoExit) {
-        Exit
-    }
+    # Do not exit the caller from module code; return status and let the caller decide.
+    return $true
 }
