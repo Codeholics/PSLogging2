@@ -44,24 +44,15 @@ function Send-Log {
         [Parameter(Mandatory=$true)][string]$EmailSubject
     )
 
-    # Resolve LogPath from a single LogContext object if provided
-    if ($null -ne $LogContext) {
-        if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
-            $LogPath = $LogContext['LogPath']
-        } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
-            $LogPath = $LogContext.LogPath
-        } else {
-            throw "Send-Log requires a single LogContext object with a LogPath property or an explicit -LogPath."
-        }
-    }
-
-    if (-not $LogPath) {
-        Write-Error "Send-Log requires -LogPath or a -LogContext containing LogPath"
+    try {
+        $LogPath = Resolve-LogPath -LogContext $LogContext -LogPath $LogPath
+    } catch {
+        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Invalid or missing LogPath' -InnerMessage $_.Exception.Message)
         return $false
     }
 
     if (-not (Test-Path $LogPath)) {
-        Write-Error "Log file not found: $LogPath"
+        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Log file not found' -InnerMessage $LogPath)
         return $false
     }
 

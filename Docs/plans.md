@@ -13,9 +13,9 @@ Status legend:
 
 ### 🚧 Milestone 1: Reliability baseline
 
-- 🚧 Finish the remaining correctness work in `Start-Log`, `Stop-Log`, and the writer functions.
+- ✅ Finish the remaining correctness work in `Start-Log`, `Stop-Log`, and the writer functions.
 - ✅ Remove unsafe control-flow patterns such as `Exit 1` inside reusable module code.
-- ⏳ Standardize validation and error handling across the module.
+- 🚧 Standardize validation and error handling across the module.
 
 ### ⏳ Milestone 2: Operational hardening
 
@@ -40,9 +40,9 @@ Status legend:
 - ⏳ Add structured logging once the plain-text logging surface is stable.
 - ⏳ Add configuration-file support after the runtime behavior and API are settled.
 
-## 🚧 Phase 1: Stabilize Core Logging Behavior
+## ✅ Phase 1: Stabilize Core Logging Behavior
 
-### 🚧 1. Harden `Start-Log`
+### ✅ 1. Harden `Start-Log`
 
 - ✅ Add `[CmdletBinding()]`.
 - ✅ Fix the outdated inline comment on `Style` so it matches the supported values.
@@ -68,13 +68,13 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
  - ✅ Add `[ValidateNotNullOrEmpty()]` to `Message` parameters.
  - ✅ Remove the pre-write `Test-Path` check and rely on the atomic append helper so existence checks do not race file creation/deletion.
 
-### 🚧 4. Rework `Write-LogError` exit behavior
+### ✅ 4. Rework `Write-LogError` exit behavior
 
 - ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` with explicit `-Exit` behavior).
 - ✅ Treat logging failures in `Write-LogError` as error-stream / terminating failures, not warnings, so automation cannot silently miss a failed error log write.
-- 🚧 Remove the current partial pipeline-oriented behavior and keep `Write-LogError` as an explicit parameter-driven API unless full pipeline support is intentionally designed across all writers.
+- ✅ Removed the partial pipeline-oriented behavior; `Write-LogError`, writers, and `Send-Log` now require a single `-LogContext` or explicit `-LogPath`. Full pipeline support may be designed later as a dedicated feature.
 
-### 🔁 Migration: Removing script-scope state
+### ✅ Migration: Removing script-scope state
 
 - The module no longer sets or relies on `$script:currentLogPath` or `$script:LogStopwatch`. All public writers and `Send-Log` accept an explicit `-LogContext` (or `-LogPath`).
 - Callers must capture the context returned by `Start-Log -ReturnContext` or create one with `New-LogContext` and pass it to writer functions and `Stop-Log`.
