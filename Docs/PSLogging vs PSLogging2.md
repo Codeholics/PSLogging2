@@ -69,52 +69,11 @@
 
 # Overall Scores
 
-<<<<<<< Updated upstream
-## PSLogging
-
-### MEDIUM-HIGH RISK: Stop-Log Terminates Process
-
-Implementation:
-
-```powershell
-If( !($NoExit) -or ($NoExit -eq $False) ){
-    Exit
-}
-```
-
-### Impact
-
-Unexpected process termination can occur if:
-
-```powershell
--NoExit
-```
-
-is forgotten.
-
-### Severity
-
-🟡 MEDIUM-HIGH
-
-### PSLogging2
-
-PSLogging2 avoids implicit process termination: `Stop-Log` returns a status and
-will only terminate the caller when explicitly requested via the `-Exit` switch.
-
-- Is documented
-- Is tested
-- Is already under review in the roadmap
-
-### Winner
-
-Slight Advantage: 🏆 PSLogging2
-=======
 | Module | Grade | Score |
 |----------|----------|----------|
 | PSLogging | B- | 7.0 / 10 |
 | PSLogging2 (Original Review) | A+ | 9.8 / 10 |
 | PSLogging2 (Current Revision) | A+ | 9.9 / 10 |
->>>>>>> Stashed changes
 
 ---
 
