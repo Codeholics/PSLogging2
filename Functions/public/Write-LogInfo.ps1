@@ -42,22 +42,13 @@ function Write-LogInfo {
     )
 
     # Determine target path from LogContext or explicit LogPath
-        # If an array/container was passed (e.g. previous pipeline outputs), pick the element that contains LogPath
-        if ($PSBoundParameters.ContainsKey('LogContext') -and $LogContext -is [System.Array]) {
-            $found = $null
-            foreach ($item in $LogContext) {
-                try {
-                    if ($item -is [System.Collections.IDictionary] -and $item.ContainsKey('LogPath')) { $found = $item; break }
-                    if ($item -ne $null -and ($item.PSObject.Properties.Name -contains 'LogPath')) { $found = $item; break }
-                } catch { }
-            }
-            if ($found -ne $null) { $LogContext = $found } elseif ($LogContext.Count -gt 0) { $LogContext = $LogContext[0] } else { $LogContext = $null }
-        }
     if ($null -ne $LogContext) {
         if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
             $targetPath = $LogContext['LogPath']
-        } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
+        } elseif ($null -ne $LogContext -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
             $targetPath = $LogContext.LogPath
+        } else {
+            throw "Write-LogInfo requires a single LogContext object with a LogPath property."
         }
     } elseif ($PSBoundParameters.ContainsKey('LogPath') -and $LogPath) {
         $targetPath = $LogPath

@@ -31,7 +31,7 @@ Status legend:
 
 ### ⏳ Milestone 4: Architecture decisions
 
-- ⏳ Decide whether to keep module-wide script state or move toward explicit log context/state.
+- ✅ Keep explicit `LogContext`/`LogPath` state as the long-term design; do not reintroduce module-wide script state.
 - ⏳ Decide whether parallel runspace support is a target feature or out of scope.
 - ⏳ Use those decisions to shape any broader refactor.
 
@@ -46,7 +46,7 @@ Status legend:
 
 - ✅ Add `[CmdletBinding()]`.
 - ✅ Fix the outdated inline comment on `Style` so it matches the supported values.
-- ⏳ Decide whether script-scope state is acceptable long term or whether log state should be passed explicitly.
+- ✅ Use explicit `LogContext`/`LogPath` state long term; treat script-scope state as retired.
 - ✅ Throw on header or initialization failure instead of only writing an error and continuing.
 
 ### ✅ 2. Harden `Stop-Log`
@@ -68,11 +68,11 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
  - ✅ Add `[ValidateNotNullOrEmpty()]` to `Message` parameters.
  - ✅ Remove the pre-write `Test-Path` check and rely on the atomic append helper so existence checks do not race file creation/deletion.
 
-### ⏳ 4. Rework `Write-LogError` exit behavior
+### 🚧 4. Rework `Write-LogError` exit behavior
 
-- ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` and default exit behavior).
-- ⏳ Decide whether logging failures in `Write-LogError` should stay warnings or become error-stream output.
-- ⏳ Revisit pipeline support so it is either fully supported or removed.
+- ✅ Replace `Exit 1` with a caller-controlled failure pattern (now uses `Stop-Log` with explicit `-Exit` behavior).
+- ✅ Treat logging failures in `Write-LogError` as error-stream / terminating failures, not warnings, so automation cannot silently miss a failed error log write.
+- 🚧 Remove the current partial pipeline-oriented behavior and keep `Write-LogError` as an explicit parameter-driven API unless full pipeline support is intentionally designed across all writers.
 
 ### 🔁 Migration: Removing script-scope state
 
@@ -225,7 +225,7 @@ Validate behavior with:
 
 ## ⏳ Deferred Architecture Work
 
-- Evaluate whether module-wide script variables should be replaced with explicit state passed between functions.
+- Explicit state passed between functions is the chosen direction; do not reintroduce module-wide script variables.
 - Evaluate whether parallel runspace support is a goal for this module or out of scope.
 
 ## ⏳ Internal Architecture Improvements

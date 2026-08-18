@@ -44,24 +44,14 @@ function Send-Log {
         [Parameter(Mandatory=$true)][string]$EmailSubject
     )
 
-    # If an array/container was passed, pick the element that contains LogPath.
-    if ($PSBoundParameters.ContainsKey('LogContext') -and $LogContext -is [System.Array]) {
-        $found = $null
-        foreach ($item in $LogContext) {
-            try {
-                if ($item -is [System.Collections.IDictionary] -and $item.ContainsKey('LogPath')) { $found = $item; break }
-                if ($item -ne $null -and ($item.PSObject.Properties.Name -contains 'LogPath')) { $found = $item; break }
-            } catch { }
-        }
-        if ($found -ne $null) { $LogContext = $found } elseif ($LogContext.Count -gt 0) { $LogContext = $LogContext[0] } else { $LogContext = $null }
-    }
-
-    # Resolve LogPath from LogContext if provided
+    # Resolve LogPath from a single LogContext object if provided
     if ($null -ne $LogContext) {
         if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
             $LogPath = $LogContext['LogPath']
         } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
             $LogPath = $LogContext.LogPath
+        } else {
+            throw "Send-Log requires a single LogContext object with a LogPath property or an explicit -LogPath."
         }
     }
 
