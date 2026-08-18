@@ -41,28 +41,10 @@ function Write-LogInfo {
         $LogPath
     )
 
-    # Determine target path from LogContext or explicit LogPath
-        # If an array/container was passed (e.g. previous pipeline outputs), pick the element that contains LogPath
-        if ($PSBoundParameters.ContainsKey('LogContext') -and $LogContext -is [System.Array]) {
-            $found = $null
-            foreach ($item in $LogContext) {
-                try {
-                    if ($item -is [System.Collections.IDictionary] -and $item.ContainsKey('LogPath')) { $found = $item; break }
-                    if ($item -ne $null -and ($item.PSObject.Properties.Name -contains 'LogPath')) { $found = $item; break }
-                } catch { }
-            }
-            if ($found -ne $null) { $LogContext = $found } elseif ($LogContext.Count -gt 0) { $LogContext = $LogContext[0] } else { $LogContext = $null }
-        }
-    if ($null -ne $LogContext) {
-        if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
-            $targetPath = $LogContext['LogPath']
-        } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
-            $targetPath = $LogContext.LogPath
-        }
-    } elseif ($PSBoundParameters.ContainsKey('LogPath') -and $LogPath) {
-        $targetPath = $LogPath
-    } else {
-        throw "Write-LogInfo requires -LogContext or -LogPath to be provided."
+    try {
+        $targetPath = Resolve-LogPath -LogContext $LogContext -LogPath $LogPath
+    } catch {
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogInfo' -Reason 'Invalid or missing LogPath' -InnerMessage $_.Exception.Message)
     }
 
     # Determine effective timestamp position.
@@ -78,6 +60,6 @@ function Write-LogInfo {
     try {
         Append-LogAtomic -Path $targetPath -Value "- $($formatted)" | Out-Null
     } catch {
-        throw "Failed to append to log: $($_.Exception.Message)"
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogInfo' -Reason 'Failed to append to log' -InnerMessage $_.Exception.Message)
     }
 }

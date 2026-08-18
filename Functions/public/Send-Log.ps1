@@ -44,34 +44,15 @@ function Send-Log {
         [Parameter(Mandatory=$true)][string]$EmailSubject
     )
 
-    # If an array/container was passed, pick the element that contains LogPath.
-    if ($PSBoundParameters.ContainsKey('LogContext') -and $LogContext -is [System.Array]) {
-        $found = $null
-        foreach ($item in $LogContext) {
-            try {
-                if ($item -is [System.Collections.IDictionary] -and $item.ContainsKey('LogPath')) { $found = $item; break }
-                if ($item -ne $null -and ($item.PSObject.Properties.Name -contains 'LogPath')) { $found = $item; break }
-            } catch { }
-        }
-        if ($found -ne $null) { $LogContext = $found } elseif ($LogContext.Count -gt 0) { $LogContext = $LogContext[0] } else { $LogContext = $null }
-    }
-
-    # Resolve LogPath from LogContext if provided
-    if ($null -ne $LogContext) {
-        if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
-            $LogPath = $LogContext['LogPath']
-        } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
-            $LogPath = $LogContext.LogPath
-        }
-    }
-
-    if (-not $LogPath) {
-        Write-Error "Send-Log requires -LogPath or a -LogContext containing LogPath"
+    try {
+        $LogPath = Resolve-LogPath -LogContext $LogContext -LogPath $LogPath
+    } catch {
+        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Invalid or missing LogPath' -InnerMessage $_.Exception.Message)
         return $false
     }
 
     if (-not (Test-Path $LogPath)) {
-        Write-Error "Log file not found: $LogPath"
+        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Log file not found' -InnerMessage $LogPath)
         return $false
     }
 

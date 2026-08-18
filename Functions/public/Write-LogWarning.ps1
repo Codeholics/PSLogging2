@@ -41,28 +41,10 @@ function Write-LogWarning {
         $LogPath
     )
 
-    # Determine target path from LogContext or explicit LogPath
-        # If an array/container was passed (e.g. previous pipeline outputs), pick the element that contains LogPath
-        if ($PSBoundParameters.ContainsKey('LogContext') -and $LogContext -is [System.Array]) {
-            $found = $null
-            foreach ($item in $LogContext) {
-                try {
-                    if ($item -is [System.Collections.IDictionary] -and $item.ContainsKey('LogPath')) { $found = $item; break }
-                    if ($item -ne $null -and ($item.PSObject.Properties.Name -contains 'LogPath')) { $found = $item; break }
-                } catch { }
-            }
-            if ($found -ne $null) { $LogContext = $found } elseif ($LogContext.Count -gt 0) { $LogContext = $LogContext[0] } else { $LogContext = $null }
-        }
-    if ($null -ne $LogContext) {
-        if ($LogContext -is [System.Collections.IDictionary] -and $LogContext.ContainsKey('LogPath')) {
-            $targetPath = $LogContext['LogPath']
-        } elseif ($LogContext -ne $null -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
-            $targetPath = $LogContext.LogPath
-        }
-    } elseif ($PSBoundParameters.ContainsKey('LogPath') -and $LogPath) {
-        $targetPath = $LogPath
-    } else {
-        throw "Write-LogWarning requires -LogContext or -LogPath to be provided."
+    try {
+        $targetPath = Resolve-LogPath -LogContext $LogContext -LogPath $LogPath
+    } catch {
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogWarning' -Reason 'Invalid or missing LogPath' -InnerMessage $_.Exception.Message)
     }
 
     if ($TimestampPosition -ne 'None') {
@@ -77,6 +59,6 @@ function Write-LogWarning {
     try {
         Append-LogAtomic -Path $targetPath -Value $line | Out-Null
     } catch {
-        throw "Failed to append warning to log: $($_.Exception.Message)"
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogWarning' -Reason 'Failed to append warning to log' -InnerMessage $_.Exception.Message)
     }
 }

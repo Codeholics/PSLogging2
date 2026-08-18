@@ -5,7 +5,7 @@ Describe "Stop-Log and Write-LogError integration" {
         if (-Not (Test-Path $script:tempDir)) { New-Item -Path $script:tempDir -ItemType Directory | Out-Null }
     }
 
-    It "writes a footer when Stop-Log is called (NoExit)" {
+    It "writes a footer when Stop-Log is called (no exit by default)" {
         $scriptPath = Join-Path $script:tempDir 'stoplog_noexit.ps1'
         $logDir = Join-Path $script:tempDir 'logs'
         $scriptLines = @(
@@ -13,7 +13,7 @@ Describe "Stop-Log and Write-LogError integration" {
     "Import-Module (Join-Path `$moduleRoot 'PSLogging2.psm1') -Force",
     "`$ctx = Start-Log -Style Simple -LogDir '$logDir' -Title 'Pester StopLog Test' -ToScreen -ReturnContext",
     "Write-LogInfo -Message 'step' -LogContext `$ctx",
-    "Stop-Log -LogContext `$ctx -NoExit",
+    "Stop-Log -LogContext `$ctx",
     "Exit 0"
         )
         $scriptLines | Set-Content -Path $scriptPath -Encoding UTF8
