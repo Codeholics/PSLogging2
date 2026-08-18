@@ -226,6 +226,18 @@ Set-Location .\Tests
 .\Test-ConcurrentDaily.ps1
 ```
 
+### Included Tests
+
+PSLogging2 includes validation for:
+
+- Concurrent multi-process writes
+- Daily log initialization
+- LogContext workflows
+- SMTP delivery behavior
+- Timestamp validation
+- Failure path handling
+- Stop-Log integration behavior
+
 ### Review planned work
 
 - Implementation roadmap: `Docs/plans.md`
