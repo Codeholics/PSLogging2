@@ -52,19 +52,20 @@ function Send-Log {
     }
 
     if (-not (Test-Path $LogPath)) {
-        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Log file not found' -InnerMessage $LogPath)
+        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Log file not found' -InnerMessage $LogPath -Path $LogPath)
         return $false
     }
 
     Try {
-        $sBody = Get-Content -Path $LogPath -Raw
+        $sBody = Get-Content -Path $LogPath -Raw -ErrorAction Stop
         $oSmtp = New-Object Net.Mail.SmtpClient($SMTPServer)
         # set timeout before sending
         $oSmtp.Timeout = 30000
         $oSmtp.Send($EmailFrom, $EmailTo, $EmailSubject, $sBody)
         return $true
     } Catch {
-        Write-Error "Failed to send log email: $($_)"
+        $inner = if ($_.Exception) { $_.Exception.Message } else { $_.ToString() }
+        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Failed to send log email' -InnerMessage $inner -Path $LogPath)
         return $false
     } Finally {
         if ($oSmtp) { $oSmtp.Dispose() }

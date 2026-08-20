@@ -17,6 +17,7 @@ PSLogging2 provides file-based logging with simple writer functions, multiple lo
 - Three log file layouts: `Simple`, `Standard`, and `Daily`
 - Dedicated helpers for info, warning, and error messages
 - Optional timestamp placement controlled by `-TimestampPosition <Front|Back|None>`
+ - Optional timestamp placement controlled by `-TimestampPosition <Front|Back|None>`
 - Daily log reuse with automatic run separators
 - Atomic append logic for safer concurrent writes
 - Optional SMTP delivery with `Send-Log`
@@ -128,13 +129,11 @@ Stop-Log -LogContext $ctx
 
 ## Timestamp Behavior
 
-Timestamps are optional and controlled by the `-TimestampPosition` parameter.
+Timestamps are optional and controlled by the `-TimestampPosition` parameter. This simplified configuration is fully implemented and covered by tests.
 
 - `-TimestampPosition None` (default): message is written as-is
 - `-TimestampPosition Front`: timestamp is prepended
 - `-TimestampPosition Back`: timestamp is appended
-
-This behavior is covered by Pester tests for `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`, including invalid value rejection.
 
 Example:
 
@@ -147,12 +146,12 @@ Write-LogWarning -Message 'Retrying request' -TimestampPosition Back
 
 | Function | Purpose |
 | --- | --- |
-| `Start-Log` | Initializes the log path and writes the run header |
+| `Start-Log` | Initializes the log path and writes the run header. `-ReturnContext` returns a `New-LogContext` instance with an active stopwatch. |
 | `Write-LogInfo` | Appends informational messages |
 | `Write-LogWarning` | Appends warning messages |
 | `Write-LogError` | Appends error messages and can optionally stop execution |
 | `Stop-Log` | Writes footer information and returns a status; use `-Exit` to terminate the caller |
-| `Send-Log` | Emails a completed log file through SMTP |
+| `Send-Log` | Emails a completed log file through SMTP. Reads the log with `-ErrorAction Stop` and sets a send timeout. |
 | `New-LogContext` | Creates an explicit context when a log path already exists |
 
 ## Concurrency
@@ -196,11 +195,11 @@ Notes:
 ## Current Limitations
 
 - Writers and `Send-Log` require a single explicit `LogContext` returned by `Start-Log -ReturnContext` or created with `New-LogContext`, or an explicit `-LogPath`.
-- `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling)
+- `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling).
 - Pipeline input is not supported for `LogContext`; pass a single context or path per command.
 
-- `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller.
-- `Write-LogError -ExitGracefully` writes the footer and exits the calling process after a successful error entry.
+- `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller. Note: comment-based help for `Stop-Log` still contains an outdated example that incorrectly states the function exits by default.
+- `Write-LogError -ExitGracefully` writes the footer and exits the calling process when `Stop-Log -Exit` is invoked.
 - Timestamp switches were replaced with `-TimestampPosition`, and writer functions validate `Message` input.
 
 ## Development

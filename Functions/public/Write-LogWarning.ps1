@@ -59,6 +59,6 @@ function Write-LogWarning {
     try {
         Append-LogAtomic -Path $targetPath -Value $line | Out-Null
     } catch {
-        throw (New-LogExceptionMessage -FunctionName 'Write-LogWarning' -Reason 'Failed to append warning to log' -InnerMessage $_.Exception.Message)
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogWarning' -Reason 'Failed to append warning to log' -InnerMessage $_.Exception.Message -Path $targetPath)
     }
 }

@@ -60,6 +60,6 @@ function Write-LogInfo {
     try {
         Append-LogAtomic -Path $targetPath -Value "- $($formatted)" | Out-Null
     } catch {
-        throw (New-LogExceptionMessage -FunctionName 'Write-LogInfo' -Reason 'Failed to append to log' -InnerMessage $_.Exception.Message)
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogInfo' -Reason 'Failed to append to log' -InnerMessage $_.Exception.Message -Path $targetPath)
     }
 }

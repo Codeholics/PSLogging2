@@ -63,7 +63,7 @@ function Write-LogError {
     try {
         Append-LogAtomic -Path $targetPath -Value $line | Out-Null
     } catch {
-        throw (New-LogExceptionMessage -FunctionName 'Write-LogError' -Reason 'Failed to append error to log' -InnerMessage $_.Exception.Message)
+        throw (New-LogExceptionMessage -FunctionName 'Write-LogError' -Reason 'Failed to append error to log' -InnerMessage $_.Exception.Message -Path $targetPath)
     }
 
     if ($ExitGracefully) {
