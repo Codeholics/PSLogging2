@@ -9,9 +9,11 @@
 #>
 $RootDir = $PSScriptRoot
 $FunctionDir = Join-Path -Path $RootDir -ChildPath "Functions"
+$PublicFunctionDir = Join-Path -Path $FunctionDir -ChildPath "public"
+$PrivateFunctionDir = Join-Path -Path $FunctionDir -ChildPath "private"
 
-# Get all functions in the Functions folder
-$Functions = Get-ChildItem -Path $FunctionDir -Filter *.ps1 -Recurse | ForEach-Object {
+# Get all public functions in the module
+$PublicFunctions = Get-ChildItem -Path $FunctionDir -Filter *.ps1 -Recurse | ForEach-Object {
     $content = Get-Content $_.FullName
     foreach ($item in $content) {
         if ($item -match "^function\s+([a-z]+[\w-]*)") {
@@ -20,6 +22,17 @@ $Functions = Get-ChildItem -Path $FunctionDir -Filter *.ps1 -Recurse | ForEach-O
     }
 } | Select-Object -Unique
 
+# Get all private functions in the module
+$PrivateFunctions = Get-ChildItem -Path $PrivateFunctionDir -Filter *.ps1 -Recurse | ForEach-Object {
+    $content = Get-Content $_.FullName
+    foreach ($item in $content) {
+        if ($item -match "^function\s+([a-z]+[\w-]*)") {
+            $matches[1]
+        }
+    }
+} | Select-Object -Unique
+
+# Split the root directory to get the module name (last part of the path)
 $ModuleName = $RootDir.Split("\")[-1]
 
 # Create the module manifest
@@ -30,14 +43,14 @@ $Params = @{
     "CompanyName" 			    = 'Codeholics.com (https://codeholics.com)' 
     "RootModule" 			    = "$ModuleName.psm1"
     "CompatiblePSEditions" 		= @('Desktop','Core') 
-    "FunctionsToExport" 		= $Functions
-    "CmdletsToExport" 		    = $Functions
+    "FunctionsToExport" 		= $PublicFunctions
+    "CmdletsToExport" 		    = $PublicFunctions
     "VariablesToExport" 		= @() 
     "AliasesToExport" 		    = @() 
     "Description"               = "$ModuleName is a custom built module."
     "ModuleVersion"             = "1.0.0"
     "PowerShellVersion"         = '5.1'
-    "Copyright"                 = "(c) $(Get-Date -Format yyyy) Eric Reis. Licensed under the MIT License."
+    "Copyright"                 = "$(Get-Date -Format yyyy) Eric Reis. Licensed under the MIT License."
 } 
 
 New-ModuleManifest @Params
