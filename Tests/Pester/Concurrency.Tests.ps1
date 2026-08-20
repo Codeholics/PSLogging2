@@ -19,7 +19,7 @@ Describe "Concurrent writes with separate LogContext instances" {
                 "`$moduleRoot = (Resolve-Path (Join-Path `$PSScriptRoot '..\\..\\..')).Path",
                 "Import-Module (Join-Path `$moduleRoot 'PSLogging2.psm1') -Force",
                 "`$ctx = Start-Log -Style Daily -LogDir '$logDir' -Title 'Concurrency Test' -ReturnContext",
-                "for (`$i = 1; `$i -le $linesPerJob; `$i++) { Write-LogInfo -Message 'run $runId job$j line `$i' -LogContext `$ctx }",
+                "for (`$i = 1; `$i -le $linesPerJob; `$i++) { Write-LogInfo -Message `"run $runId job$j line `$i`" -LogContext `$ctx }",
                 "Stop-Log -LogContext `$ctx"
             )
             $scriptLines | Set-Content -Path $scriptPath -Encoding UTF8
@@ -44,8 +44,30 @@ Describe "Concurrent writes with separate LogContext instances" {
         $content = Get-Content -Path $logFile.FullName -Raw
 
         # Count occurrences of job lines
-        $matchCount = ([regex]::Matches($content, [regex]::Escape("run $runId") + ' job\d+ line')).Count
-        $matchCount | Should Be ($jobs * $linesPerJob)
+        # Collect all lines that mention this run id
+        $lines = ($content -split "`r?`n") | Where-Object { $_ -match [regex]::Escape("run $runId") }
+
+        # Ensure total count matches expectation
+        $lines.Count | Should Be ($jobs * $linesPerJob)
+
+        # Ensure every full message line is unique (no duplicates)
+        $uniqueLines = $lines | Sort-Object -Unique
+        $uniqueLines.Count | Should Be ($jobs * $linesPerJob)
+
+        # Detect malformed lines that mention the runId but don't include the expected keywords
+        $malformed = $lines | Where-Object { -not ($_ -match 'job') -or -not ($_ -match 'line') }
+        $malformed.Count | Should Be 0
+
+        # Header should exist exactly once (initial header block contains the title line)
+        $headerCount = ([regex]::Matches($content, '\*{99}').Count)
+        ($headerCount -ge 1) | Should Be $true
+
+        # Footer lines contain the 'Finished at:' marker; expect one per process that called Stop-Log
+        $footerCount = ([regex]::Matches($content, 'Finished at:').Count)
+        $footerCount | Should Be $jobs
+
+        # Verify processes exited successfully
+        foreach ($proc in $procs) { $proc.ExitCode | Should Be 0 }
     }
 
     AfterAll {

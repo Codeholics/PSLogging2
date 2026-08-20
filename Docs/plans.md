@@ -20,14 +20,14 @@ Status legend:
 ### 🚧 Milestone 2: Operational hardening
 
 - 🚧 Improve `Send-Log` reliability, validation, disposal, and large-log handling.
-- 🚧 Reduce remaining script-scope and lifecycle risks.
+- 🚧 Reduce remaining lifecycle and error-handling risks.
 - 🚧 Add tests for the core logging lifecycle and failure paths.
 
 ### ⏳ Milestone 3: Documentation and UX cleanup
 
-- ⏳ Bring `README.md`, comment-based help, and `Review.md` into alignment with actual behavior.
-- ⏳ Simplify timestamp configuration and other rough edges in the public API.
-- ⏳ Make the module easier to adopt safely in automation environments.
+- ✅ Bring `README.md` and `Review.md` into alignment with actual behavior; comment-based help still needs targeted fixes.
+- ✅ Simplify timestamp configuration and other rough edges in the public API.
+- 🚧 Make the module easier to adopt safely in automation environments (remaining Send-Log hardening and documentation of migration patterns).
 
 ### ⏳ Milestone 4: Architecture decisions
 
@@ -108,7 +108,7 @@ Migration steps:
 
 ### 🚧 1. Fix remaining SMTP behavior and validation
 
-- 🚧 Add `[ValidateNotNullOrEmpty()]` to `LogPath`, `EmailFrom`, `EmailTo`, and `EmailSubject`.
+- 🚧 Add `[ValidateNotNullOrEmpty()]` to `LogPath`, `EmailFrom`, `EmailTo`, and `EmailSubject`. `SMTPServer` is already validated.
 - ✅ Set SMTP timeout before calling `.Send()`.
 - ✅ Dispose the SMTP client reliably.
 - 🚧 Decide whether `Send-Log` should throw on failure or continue returning `$false` with an error record.
@@ -154,21 +154,21 @@ Migration steps:
 - ✅ Add `Send-Log` SMTP-exception coverage.
 - ⏳ Add tests for log directory creation failures.
 
-#### ⏳ Concurrency Integrity Validation
+#### 🚧 Concurrency Integrity Validation
 
 Extend the existing concurrency suite to validate:
 
-- ⏳ Exact expected entry count.
+- ✅ Exact expected entry count.
 - ⏳ Duplicate entry detection.
 - ⏳ Corrupted or interleaved entry detection.
 - ⏳ Header integrity validation.
 - ⏳ Footer integrity validation.
 
-#### ⏳ Daily Initialization Race Testing
+#### 🚧 Daily Initialization Race Testing
 
-Add validation for concurrent startup scenarios:
+The existing concurrency test already starts multiple processes against a non-existent daily log. Extend it with explicit initialization assertions:
 
-- ⏳ Multiple PowerShell processes simultaneously running:
+- ✅ Multiple PowerShell processes simultaneously running:
 
 ```powershell
 Start-Log -Style Daily
@@ -178,10 +178,10 @@ against a non-existent daily log.
 
 Validate:
 
-- Only one header is created.
-- No duplicate initialization data exists.
-- No corruption occurs.
-- No initialization failures occur.
+- ⏳ Only one header is created.
+- ⏳ No duplicate initialization data exists.
+- ⏳ No corruption occurs.
+- ⏳ No initialization failures occur (including process exit-code assertions).
 
 Recent verification:
 
@@ -210,7 +210,7 @@ Validate:
 - ⏳ No missing entries
 - ⏳ No malformed entries
 - ⏳ No interleaved/corrupted log lines
-- ⏳ Exact expected entry counts
+- ✅ Exact expected entry counts
 - ⏳ Correct header creation behavior
 - ⏳ Correct footer creation behavior
 
@@ -287,6 +287,18 @@ Benefits:
 - Better separation of concerns
 - Easier long-term maintenance
 - Simpler contributor onboarding
+
+### 🚧 Code Review Follow-Up
+
+Items accepted from `Review.md` after comparison with the current implementation and tests:
+
+- ✅ **Standardize exception messages:** `New-LogExceptionMessage` is used for visible failures across core functions.
+- ✅ **Add path-aware diagnostics:** `New-LogExceptionMessage` accepts an optional `Path` and callers pass the log path where applicable.
+- ✅ **Simplify `Start-Log` error handling:** `Start-Log` uses focused error stages and fails fast on directory creation.
+- ✅ **Centralize LogContext construction:** `Start-Log -ReturnContext` returns a `New-LogContext` instance (stopwatch and start time preserved).
+- ✅ **Make filesystem failures terminating:** Key filesystem operations use `-ErrorAction Stop` (directory creation, log reads).
+- ✅ **Use `Resolve-LogPath` consistently:** `Stop-Log` and writer functions use `Resolve-LogPath` to validate contexts.
+- ✅ **Strengthen existing concurrency tests:** Concurrency tests now assert uniqueness, header/footer counts, malformed-line detection, and worker exit codes.
 
 ## ⏳ Future Enhancements
 

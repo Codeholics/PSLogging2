@@ -22,11 +22,11 @@ function Append-LogAtomic {
             }
             return $true
         } catch [System.IO.IOException] {
-            if ($i -eq ($MaxRetries - 1)) { throw }
+            if ($i -eq ($MaxRetries - 1)) { throw (New-LogExceptionMessage -FunctionName 'Append-LogAtomic' -Reason 'Failed to append to log' -InnerMessage $_.Exception.Message -Path $Path) }
             $maxDelay = [Math]::Max(75, ($RetryDelayMs * ($i + 1)))
             Start-Sleep -Milliseconds (Get-Random -Minimum 25 -Maximum $maxDelay)
         } catch {
-            throw
+            throw (New-LogExceptionMessage -FunctionName 'Append-LogAtomic' -Reason 'Failed to append to log' -InnerMessage $_.Exception.Message -Path $Path)
         }
     }
 }
@@ -71,11 +71,11 @@ $HeaderTitle
             }
             return $true
         } catch [System.IO.IOException] {
-            if ($i -eq ($MaxRetries - 1)) { throw }
+            if ($i -eq ($MaxRetries - 1)) { throw (New-LogExceptionMessage -FunctionName 'Initialize-LogAtomic' -Reason 'Failed to initialize log atomically' -InnerMessage $_.Exception.Message -Path $Path) }
             $maxDelay = [Math]::Max(75, ($RetryDelayMs * ($i + 1)))
             Start-Sleep -Milliseconds (Get-Random -Minimum 25 -Maximum $maxDelay)
         } catch {
-            throw
+            throw (New-LogExceptionMessage -FunctionName 'Initialize-LogAtomic' -Reason 'Failed to initialize log atomically' -InnerMessage $_.Exception.Message -Path $Path)
         }
     }
 }

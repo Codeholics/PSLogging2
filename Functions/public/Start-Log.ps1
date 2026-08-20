@@ -79,34 +79,28 @@ function Start-Log {
     # Use the computed log path
     # $logPath already populated above
 
+    # Ensure the parent directory exists (fail fast on filesystem errors)
     try {
         $parentDir = Split-Path -Path $logPath -Parent
         if (-not (Test-Path -Path $parentDir)) {
-            New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+            New-Item -Path $parentDir -ItemType Directory -Force -ErrorAction Stop | Out-Null
         }
-
-        # We will initialize the file atomically (create if missing and write header/separator)
-        $fileExists = Test-Path -Path $logPath
     } catch {
-        throw "Failed to initialize log path at $logPath. Error: $($_.Exception.Message)"
+        throw (New-LogExceptionMessage -FunctionName 'Start-Log' -Reason 'Failed to create or validate log directory' -InnerMessage $_.Exception.Message -Path $logPath)
     }
 
-    try {
-        ## Start Log Header
-        if ($null -eq $Version) {
-            $HeaderTitle = "$Title - [$DateStamp]"
-        } else {
-            $HeaderTitle = "$Title ($($Version)) - [$DateStamp]"
-        }
+    # Prepare header title
+    if ($null -eq $Version) {
+        $HeaderTitle = "$Title - [$DateStamp]"
+    } else {
+        $HeaderTitle = "$Title ($($Version)) - [$DateStamp]"
+    }
 
-        # Initialize header or separator using an exclusive lock to avoid concurrent write races
-        try {
-            Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator | Out-Null
-        } catch {
-            throw "Failed to initialize log header/separator atomically: $($_.Exception.Message)"
-        }
+    # Initialize header or separator using an exclusive lock to avoid concurrent write races
+    try {
+        Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator | Out-Null
     } catch {
-        throw "Failed to write initial headers: $($_.Exception.Message)"
+        throw (New-LogExceptionMessage -FunctionName 'Start-Log' -Reason 'Failed to initialize log header/separator atomically' -InnerMessage $_.Exception.Message -Path $logPath)
     }
 
     if ($ToScreen) {
@@ -114,10 +108,10 @@ function Start-Log {
     }
 
     if ($ReturnContext) {
-        return [PSCustomObject]@{
-            LogPath = $logPath
-            Started = $DateStamp
-            Stopwatch = $stopwatch
-        }
+        $ctx = New-LogContext -LogPath $logPath
+        # Preserve the start time and stopwatch initialized above
+        $ctx | Add-Member -NotePropertyName Started -NotePropertyValue $DateStamp -Force
+        $ctx | Add-Member -NotePropertyName Stopwatch -NotePropertyValue $stopwatch -Force
+        return $ctx
     }
 }

@@ -10,14 +10,16 @@
     Optional explicit path to a log file. Defaults to the current log file
     initialized by `Start-Log`.
 
-:PARAMETER Exit
+.PARAMETER Exit
     When specified, `Stop-Log` will exit the calling process after writing
     footer data. By default `Stop-Log` will NOT exit the calling process; callers
-    should decide whether to exit after `Stop-Log` returns.
+    should decide whether to exit after `Stop-Log` returns. To exit the caller,
+    pass `-Exit`.
 .EXAMPLE
     Stop-Log -ToScreen
 
-    This example writes the footer information and then exits (default).
+    This example writes the footer information and returns to the caller. To
+    exit the process after writing the footer, use `Stop-Log -Exit`.
 #>
 function Stop-Log {
     [CmdletBinding()]
@@ -28,12 +30,13 @@ function Stop-Log {
         [switch]$Exit
     )
 
-    # Determine effective LogPath
-    if ($null -ne $LogContext -and ($LogContext.PSObject.Properties.Name -contains 'LogPath')) {
-        $LogPath = $LogContext.LogPath
+    # Determine effective LogPath using shared resolver
+    try {
+        $LogPath = Resolve-LogPath -LogContext $LogContext -LogPath $LogPath
+    } catch {
+        Write-Error (New-LogExceptionMessage -FunctionName 'Stop-Log' -Reason 'Invalid or missing LogPath' -InnerMessage $_.Exception.Message)
+        return
     }
-
-    if ($null -eq $LogPath) { return }
 
     # Determine elapsed using provided LogContext.Stopwatch if available
     if ($null -ne $LogContext -and ($LogContext.PSObject.Properties.Name -contains 'Stopwatch')) {
@@ -63,7 +66,7 @@ function Stop-Log {
     try {
         Append-LogAtomic -Path $LogPath -Value $footer | Out-Null
     } catch {
-        Write-Error "Failed to write footer to log '$LogPath': $($_.Exception.Message)"
+        Write-Error (New-LogExceptionMessage -FunctionName 'Stop-Log' -Reason 'Failed to write footer to log' -InnerMessage $_.Exception.Message -Path $LogPath)
     }
 
     if ($ToScreen) {
