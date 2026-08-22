@@ -39,9 +39,22 @@ function Send-Log {
         $LogContext,
         [string]
         $LogPath,
+        [ValidateNotNullOrEmpty()]
         [Parameter(Mandatory=$true)][string]$EmailFrom,
-        [Parameter(Mandatory=$true)][string]$EmailTo,
-        [Parameter(Mandatory=$true)][string]$EmailSubject
+        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory=$true)][object]$EmailTo,
+        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory=$true)][string]$EmailSubject,
+        [int]
+        $MaxInlineSizeMB = 5,
+        [string[]]
+        $RedactRegex,
+        [string]
+        $RedactionMask = '***REDACTED***',
+        [switch]
+        $RedactInPlace,
+        [switch]
+        $ThrowOnFailure
     )
 
     try {
@@ -57,17 +70,67 @@ function Send-Log {
     }
 
     Try {
-        $sBody = Get-Content -Path $LogPath -Raw -ErrorAction Stop
+        $fileInfo = Get-Item -Path $LogPath -ErrorAction Stop
+        $sizeBytes = $fileInfo.Length
+        $threshold = [int64]($MaxInlineSizeMB * 1MB)
+
+        # Normalize EmailTo to string[] using centralized helper
+        try {
+            $toAddrs = Normalize-EmailTo -EmailTo $EmailTo
+        } catch {
+            throw (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Failed to normalize EmailTo' -InnerMessage $_.Exception.Message -Path $LogPath)
+        }
+
+        # Prepare sanitized send path if redaction requested
+        $sendPath = $LogPath
+        $tempSanitized = $null
+        if ($RedactRegex) {
+            $raw = Get-Content -Path $LogPath -Raw -ErrorAction Stop
+            foreach ($rx in $RedactRegex) {
+                try {
+                    $raw = [regex]::Replace($raw, $rx, $RedactionMask)
+                } catch {
+                    throw (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason "Invalid redaction regex: $rx" -InnerMessage $_.Exception.Message -Path $LogPath)
+                }
+            }
+
+            if ($RedactInPlace) {
+                Set-Content -Path $LogPath -Value $raw -Encoding UTF8 -Force
+                $sendPath = $LogPath
+            } else {
+                $tempSanitized = Join-Path -Path $env:TEMP -ChildPath ([guid]::NewGuid().ToString() + '.log')
+                Set-Content -Path $tempSanitized -Value $raw -Encoding UTF8 -Force
+                $sendPath = $tempSanitized
+            }
+        }
+
         $oSmtp = New-Object Net.Mail.SmtpClient($SMTPServer)
         # set timeout before sending
         $oSmtp.Timeout = 30000
-        $oSmtp.Send($EmailFrom, $EmailTo, $EmailSubject, $sBody)
+
+        if ($sizeBytes -le $threshold) {
+            $sBody = Get-Content -Path $sendPath -Raw -ErrorAction Stop
+            $oSmtp.Send($EmailFrom, ($toAddrs -join ','), $EmailSubject, $sBody)
+        } else {
+            $mail = New-Object System.Net.Mail.MailMessage
+            $mail.From = $EmailFrom
+            foreach ($addr in $toAddrs) { $mail.To.Add($addr) }
+            $mail.Subject = $EmailSubject
+            $attachment = New-Object System.Net.Mail.Attachment($sendPath)
+            $mail.Attachments.Add($attachment)
+            $oSmtp.Send($mail)
+            if ($mail) { $mail.Dispose() }
+        }
+
         return $true
     } Catch {
         $inner = if ($_.Exception) { $_.Exception.Message } else { $_.ToString() }
-        Write-Error (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Failed to send log email' -InnerMessage $inner -Path $LogPath)
+        $err = New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Failed to send log email' -InnerMessage $inner -Path $LogPath
+        Write-Error $err
+        if ($ThrowOnFailure) { throw $err }
         return $false
     } Finally {
         if ($oSmtp) { $oSmtp.Dispose() }
+        if ($tempSanitized -and (Test-Path $tempSanitized)) { Remove-Item -Path $tempSanitized -Force -ErrorAction SilentlyContinue }
     }
 }

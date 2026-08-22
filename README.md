@@ -6,7 +6,7 @@
 ![Concurrency](https://img.shields.io/badge/concurrency-atomic%20appends-9a3412?style=flat-square)
 ![Automation](https://img.shields.io/badge/use%20case-automation-1d4ed8?style=flat-square)
 
-[Quick Start](#quick-start) • [Log Styles](#log-styles) • [Functions](#functions) • [Concurrency](#concurrency) • [Development](#development)
+[Quick Start](#quick-start) • [Log Styles](#log-styles) • [Sending Logs](#sending-logs-by-email) • [Concurrency](#concurrency) • [Development](#development)
 
 Lightweight PowerShell logging for scripts, scheduled tasks, and automation jobs.
 
@@ -17,7 +17,6 @@ PSLogging2 provides file-based logging with simple writer functions, multiple lo
 - Three log file layouts: `Simple`, `Standard`, and `Daily`
 - Dedicated helpers for info, warning, and error messages
 - Optional timestamp placement controlled by `-TimestampPosition <Front|Back|None>`
- - Optional timestamp placement controlled by `-TimestampPosition <Front|Back|None>`
 - Daily log reuse with automatic run separators
 - Atomic append logic for safer concurrent writes
 - Optional SMTP delivery with `Send-Log`
@@ -151,7 +150,7 @@ Write-LogWarning -Message 'Retrying request' -TimestampPosition Back
 | `Write-LogWarning` | Appends warning messages |
 | `Write-LogError` | Appends error messages and can optionally stop execution |
 | `Stop-Log` | Writes footer information and returns a status; use `-Exit` to terminate the caller |
-| `Send-Log` | Emails a completed log file through SMTP. Reads the log with `-ErrorAction Stop` and sets a send timeout. |
+| `Send-Log` | Emails a completed log through SMTP, with configurable inline/attachment delivery, optional redaction, and opt-in terminating failures. |
 | `New-LogContext` | Creates an explicit context when a log path already exists |
 
 ## Concurrency
@@ -173,32 +172,45 @@ Set-Location .\Tests
 
 ## Sending Logs By Email
 
-`Send-Log` sends the full log body through .NET `SmtpClient`.
+`Send-Log` sends a completed log through .NET `SmtpClient`. Pass either the `LogContext` returned by `Start-Log -ReturnContext` or an explicit `-LogPath`.
 
 ```powershell
-# Using explicit LogContext
 $ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -ReturnContext
+# Write log entries, then finish the run before delivery.
+Stop-Log -LogContext $ctx
+
 Send-Log `
 	-SMTPServer 'smtp.example.com' `
 	-LogContext $ctx `
-	-EmailFrom 'me@example.com' `
-	-EmailTo 'team@example.com' `
+	-EmailFrom 'automation@example.com' `
+	-EmailTo 'ops@example.com','oncall@example.com' `
 	-EmailSubject 'Nightly Job Log'
 ```
 
-Notes:
+The default sends logs up to 5 MB inline. Larger logs are attached; set `-MaxInlineSizeMB` to choose a different threshold. To redact sensitive content from the sent copy without changing the original log, use `-RedactRegex`. By default delivery failure writes an error and returns `$false`; add `-ThrowOnFailure` when a failed notification must stop automation.
 
-- This currently uses legacy `SmtpClient`
-- The full log is read into memory before sending
-- Modern auth and large-log handling are future hardening items
+```powershell
+$sent = Send-Log `
+	-SMTPServer 'smtp.example.com' `
+	-LogPath .\log\run.log `
+	-EmailFrom 'automation@example.com' `
+	-EmailTo 'ops@example.com, oncall@example.com' `
+	-EmailSubject 'Deployment Log' `
+	-MaxInlineSizeMB 2 `
+	-RedactRegex 'password=\S+', 'token=\S+'
+
+if (-not $sent) { Write-Error 'Log notification was not delivered.' }
+```
+
+`SmtpClient` does not support the planned modern authentication path. The current design and implementation roadmap are in [Docs/SendLog-Auth-Modernization.md](Docs/SendLog-Auth-Modernization.md); detailed current-API examples are in [Docs/Send-Log.md](Docs/Send-Log.md).
 
 ## Current Limitations
 
 - Writers and `Send-Log` require a single explicit `LogContext` returned by `Start-Log -ReturnContext` or created with `New-LogContext`, or an explicit `-LogPath`.
-- `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling).
+- `Send-Log` uses legacy SMTP authentication. Modern authentication and Microsoft Graph support are planned but are not implemented.
 - Pipeline input is not supported for `LogContext`; pass a single context or path per command.
 
-- `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller. Note: comment-based help for `Stop-Log` still contains an outdated example that incorrectly states the function exits by default.
+- `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller.
 - `Write-LogError -ExitGracefully` writes the footer and exits the calling process when `Stop-Log -Exit` is invoked.
 - Timestamp switches were replaced with `-TimestampPosition`, and writer functions validate `Message` input.
 
@@ -225,6 +237,23 @@ Set-Location .\Tests
 .\Test-ConcurrentDaily.ps1
 ```
 
+### Run the high-load stress test
+
+This launches separate `pwsh` processes and validates the expected write count.
+
+```powershell
+.\Tests\Stress\HighLoadStress.ps1 -Jobs 10 -LinesPerJob 500
+```
+
+### Run the network-share test
+
+Set `PSLOG_TEST_SHARE` to an accessible UNC share. The test skips when this variable is not set.
+
+```powershell
+$env:PSLOG_TEST_SHARE = '\\server\share'
+Invoke-Pester .\Tests\Env\NetworkShare.Tests.ps1
+```
+
 ### Included Tests
 
 PSLogging2 includes validation for:
@@ -236,6 +265,8 @@ PSLogging2 includes validation for:
 - Timestamp validation
 - Failure path handling
 - Stop-Log integration behavior
+- High-load, multi-process write validation
+- Opt-in network-share write validation
 
 ### Review planned work
 

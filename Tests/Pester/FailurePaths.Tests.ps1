@@ -5,6 +5,16 @@ Describe 'Failure paths' {
         Import-Module (Join-Path -Path (Resolve-Path (Join-Path $root '..\..')).Path -ChildPath 'PSLogging2.psm1') -Force
     }
 
+    It 'throws when log directory creation fails' {
+        $tmpDir = Join-Path $env:TEMP ([guid]::NewGuid().ToString())
+
+        Mock -CommandName New-Item -ModuleName PSLogging2 -ParameterFilter { $ItemType -eq 'Directory' } -MockWith { throw 'filesystem failure' }
+
+        { Start-Log -Style Simple -LogDir $tmpDir -Title 'fail' -ErrorAction Stop } | Should Throw
+
+        Assert-MockCalled -CommandName New-Item -ModuleName PSLogging2 -Times 1
+    }
+
     It 'throws after retry exhaustion when file is exclusively locked' {
         $path = Join-Path $env:TEMP ([guid]::NewGuid().ToString() + '.log')
         $module = Get-Module PSLogging2
@@ -72,6 +82,23 @@ Describe 'Failure paths' {
 
         $result = Send-Log -SMTPServer 'smtp.example' -LogPath $log -EmailFrom 'a@b' -EmailTo 'c@d' -EmailSubject 's'
         $result | Should Be $false
+
+        Assert-MockCalled -CommandName New-Object -ModuleName PSLogging2 -Times 1
+        Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'throws when SMTP client Send throws and -ThrowOnFailure is specified' {
+        $log = Join-Path $env:TEMP ([guid]::NewGuid().ToString() + '.log')
+        Set-Content -Path $log -Value 'body'
+
+        Mock -CommandName New-Object -MockWith {
+            $client = [pscustomobject]@{ Timeout = 0 }
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Send -Value { param($from,$to,$subject,$body) throw 'SMTP failure' } -PassThru
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Dispose -Value { } -PassThru
+            return $client
+        } -ModuleName PSLogging2
+
+        { Send-Log -SMTPServer 'smtp.example' -LogPath $log -EmailFrom 'a@b' -EmailTo 'c@d' -EmailSubject 's' -ThrowOnFailure } | Should Throw
 
         Assert-MockCalled -CommandName New-Object -ModuleName PSLogging2 -Times 1
         Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
