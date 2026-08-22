@@ -96,10 +96,10 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 
 ## ⏳ Phase 3: Align Documentation And Tests
 
-### ✅ 1. Fix documentation drift
+### ⏳ 1. Fix documentation drift
 
 - ✅ Update `README.md` to match current timestamp behavior.
-- ✅ Review all function help text for parameters and examples so they match current behavior.
+- 🚧 Update remaining function comment-based help, beginning with `Send-Log`, so all implemented parameters and examples match current behavior.
 - ✅ Update `README.md` to match explicit `LogContext` usage.
 - ✅ Document `Send-Log` delivery, attachment, redaction, and failure-handling options in [Send-Log.md](Send-Log.md).
 
@@ -133,7 +133,7 @@ Extend the existing concurrency suite to validate:
 - ✅ Header presence validation.
 - ✅ Footer integrity validation.
 
-#### 🚧 Daily Initialization Race Testing
+#### ✅ Daily Initialization Race Testing
 
 The existing concurrency test already starts multiple processes against a non-existent daily log. Extend it with explicit initialization assertions:
 
@@ -147,18 +147,19 @@ against a non-existent daily log.
 
 Validate:
 
-- ⏳ Only one header initialization block is created.
-- ⏳ No duplicate initialization data exists.
+- ✅ Only one header initialization block is created.
+- ✅ No duplicate initialization data exists.
 - ✅ No malformed run entries are written.
 - ✅ No initialization failures occur (worker exit codes are checked).
 
-Current verification: full `Tests/Pester` suite passes (18 passed, 0 failed).
+Current verification: full `Tests/Pester` suite passes (19 passed, 0 failed).
 
 ## Additional Atomic Logging Validation
 
 ### ⏳ Concurrency Scale Testing
 
 - ✅ 1,000+ writes (verified with 10 PowerShell processes writing 200 lines each).
+- ✅ 5,000-write high-I/O run (verified with 10 PowerShell processes writing 500 lines each).
 - ⏳ Multiple PowerShell jobs
 - ✅ Multiple PowerShell processes
 - ⏳ Multiple runspaces
@@ -178,8 +179,8 @@ Current verification: full `Tests/Pester` suite passes (18 passed, 0 failed).
 
 Validate behavior with:
 
-- ⏳ Network shares
-- ⏳ High I/O contention
+- 🚧 Network shares (opt-in Pester test is available through `PSLOG_TEST_SHARE`; requires an accessible UNC share).
+- ✅ High I/O contention (5,000 writes verified locally with `Tests/Stress/HighLoadStress.ps1`).
 - ⏳ Long-running daily logs
 
 ## ⏳ Deferred Architecture Work
