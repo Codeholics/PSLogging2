@@ -35,6 +35,28 @@ public class FakeSmtpClient : IDisposable {
         $result | Should Be $true
     }
 
+    It "accepts comma-separated and array recipients" {
+        $log = Join-Path $script:tempDir 'recips.log'
+        Set-Content -Path $log -Value 'body'
+
+        $global:sent = $false
+
+        Mock -CommandName New-Object -ModuleName PSLogging2 -ParameterFilter { $TypeName -eq 'Net.Mail.SmtpClient' } -MockWith {
+            $client = [pscustomobject]@{ Timeout = 0 }
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Send -Value { param($from,$to,$subject,$body) $global:sent = $true } -PassThru
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Dispose -Value { } -PassThru
+            return $client
+        }
+
+        $r1 = Send-Log -SMTPServer 'dummy' -LogPath $log -EmailFrom 'me@example.com' -EmailTo 'a@example.com,b@example.com' -EmailSubject 'recip'
+        $r1 | Should Be $true
+
+        $r2 = Send-Log -SMTPServer 'dummy' -LogPath $log -EmailFrom 'me@example.com' -EmailTo @('a@example.com','b@example.com') -EmailSubject 'recip'
+        $r2 | Should Be $true
+
+        Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
+    }
+
     It "attaches the file when over -MaxInlineSizeMB" {
         $log = Join-Path $script:tempDir 'big.log'
         # create a small file but force attachment by setting threshold to 0

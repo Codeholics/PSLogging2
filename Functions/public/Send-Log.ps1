@@ -74,13 +74,11 @@ function Send-Log {
         $sizeBytes = $fileInfo.Length
         $threshold = [int64]($MaxInlineSizeMB * 1MB)
 
-        # Normalize EmailTo to string[]
-        if ($EmailTo -is [string]) {
-            $toAddrs = $EmailTo -split '\s*,\s*' | Where-Object { $_ -ne '' }
-        } elseif ($EmailTo -is [System.Array]) {
-            $toAddrs = $EmailTo
-        } else {
-            $toAddrs = @($EmailTo.ToString())
+        # Normalize EmailTo to string[] using centralized helper
+        try {
+            $toAddrs = Normalize-EmailTo -EmailTo $EmailTo
+        } catch {
+            throw (New-LogExceptionMessage -FunctionName 'Send-Log' -Reason 'Failed to normalize EmailTo' -InnerMessage $_.Exception.Message -Path $LogPath)
         }
 
         # Prepare sanitized send path if redaction requested

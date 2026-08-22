@@ -25,7 +25,7 @@ Status legend:
 
 - ✅ Bring `README.md` and `Review.md` into alignment with actual behavior.
 - ✅ Simplify timestamp configuration and other rough edges in the public API.
-- ⏳ Add usage documentation for the current `Send-Log` options.
+- ✅ Add usage documentation for the current `Send-Log` options in [Send-Log.md](Send-Log.md).
 
 ### ⏳ Milestone 4: Architecture decisions
 
@@ -88,18 +88,20 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 - ✅ Inline logs up to `-MaxInlineSizeMB`; attach larger logs.
 - ✅ Support regex-based redaction with `-RedactRegex` and `-RedactionMask`; use a sanitized temporary copy by default and require `-RedactInPlace` to modify the source log.
 
-### 🚧 3. Plan for auth modernization
+### ✅ 3. Plan for auth modernization
 
-- 🚧 Document that `SmtpClient` is legacy and define the upgrade path.
-- 🚧 Evaluate whether modern auth support belongs in this module or a separate mail transport layer.
+- ✅ Document that `SmtpClient` is legacy and define the upgrade path in [SendLog-Auth-Modernization.md](SendLog-Auth-Modernization.md).
+- ✅ Decide that secure SMTP configuration is the first implementation phase and Microsoft Graph is the only planned built-in modern transport.
+- ⏳ Implement the approved Phase 1 secure SMTP configuration and Phase 2 Graph transport.
 
 ## ⏳ Phase 3: Align Documentation And Tests
 
-### ⏳ 1. Fix documentation drift
+### ✅ 1. Fix documentation drift
 
 - ✅ Update `README.md` to match current timestamp behavior.
 - ✅ Review all function help text for parameters and examples so they match current behavior.
 - ✅ Update `README.md` to match explicit `LogContext` usage.
+- ✅ Document `Send-Log` delivery, attachment, redaction, and failure-handling options in [Send-Log.md](Send-Log.md).
 
 ### ⏳ 2. Expand Validation Coverage
 
@@ -150,15 +152,15 @@ Validate:
 - ✅ No malformed run entries are written.
 - ✅ No initialization failures occur (worker exit codes are checked).
 
-Current verification: full `Tests/Pester` suite passes (17 passed, 0 failed).
+Current verification: full `Tests/Pester` suite passes (18 passed, 0 failed).
 
 ## Additional Atomic Logging Validation
 
 ### ⏳ Concurrency Scale Testing
 
-- ⏳ 1,000+ simultaneous writes
+- ✅ 1,000+ writes (verified with 10 PowerShell processes writing 200 lines each).
 - ⏳ Multiple PowerShell jobs
-- ⏳ Multiple PowerShell processes
+- ✅ Multiple PowerShell processes
 - ⏳ Multiple runspaces
 - ⏳ Mixed workload scenarios
 

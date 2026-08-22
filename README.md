@@ -6,7 +6,7 @@
 ![Concurrency](https://img.shields.io/badge/concurrency-atomic%20appends-9a3412?style=flat-square)
 ![Automation](https://img.shields.io/badge/use%20case-automation-1d4ed8?style=flat-square)
 
-[Quick Start](#quick-start) • [Log Styles](#log-styles) • [Functions](#functions) • [Concurrency](#concurrency) • [Development](#development)
+[Quick Start](#quick-start) • [Log Styles](#log-styles) • [Sending Logs](#sending-logs-by-email) • [Concurrency](#concurrency) • [Development](#development)
 
 Lightweight PowerShell logging for scripts, scheduled tasks, and automation jobs.
 
@@ -173,29 +173,42 @@ Set-Location .\Tests
 
 ## Sending Logs By Email
 
-`Send-Log` sends the full log body through .NET `SmtpClient`.
+`Send-Log` sends a completed log through .NET `SmtpClient`. Pass either the `LogContext` returned by `Start-Log -ReturnContext` or an explicit `-LogPath`.
 
 ```powershell
-# Using explicit LogContext
 $ctx = Start-Log -Style Standard -LogDir .\log -Title 'Nightly Job' -ReturnContext
+# Write log entries, then finish the run before delivery.
+Stop-Log -LogContext $ctx
+
 Send-Log `
 	-SMTPServer 'smtp.example.com' `
 	-LogContext $ctx `
-	-EmailFrom 'me@example.com' `
-	-EmailTo 'team@example.com' `
+	-EmailFrom 'automation@example.com' `
+	-EmailTo 'ops@example.com','oncall@example.com' `
 	-EmailSubject 'Nightly Job Log'
 ```
 
-Notes:
+The default sends logs up to 5 MB inline. Larger logs are attached; set `-MaxInlineSizeMB` to choose a different threshold. To redact sensitive content from the sent copy without changing the original log, use `-RedactRegex`. By default delivery failure writes an error and returns `$false`; add `-ThrowOnFailure` when a failed notification must stop automation.
 
-- This currently uses legacy `SmtpClient`
-- The full log is read into memory before sending
-- Modern auth and large-log handling are future hardening items
+```powershell
+$sent = Send-Log `
+	-SMTPServer 'smtp.example.com' `
+	-LogPath .\log\run.log `
+	-EmailFrom 'automation@example.com' `
+	-EmailTo 'ops@example.com, oncall@example.com' `
+	-EmailSubject 'Deployment Log' `
+	-MaxInlineSizeMB 2 `
+	-RedactRegex 'password=\S+', 'token=\S+'
+
+if (-not $sent) { Write-Error 'Log notification was not delivered.' }
+```
+
+`SmtpClient` does not support the planned modern authentication path. The current design and implementation roadmap are in [Docs/SendLog-Auth-Modernization.md](Docs/SendLog-Auth-Modernization.md); detailed current-API examples are in [Docs/Send-Log.md](Docs/Send-Log.md).
 
 ## Current Limitations
 
 - Writers and `Send-Log` require a single explicit `LogContext` returned by `Start-Log -ReturnContext` or created with `New-LogContext`, or an explicit `-LogPath`.
-- `Send-Log` is functional but not fully enterprise-hardened yet (modern auth, large-log handling).
+- `Send-Log` uses legacy SMTP authentication. Modern authentication and Microsoft Graph support are planned but are not implemented.
 - Pipeline input is not supported for `LogContext`; pass a single context or path per command.
 
 - `Stop-Log` does not exit by default after writing the footer; pass `-Exit` to terminate the caller. Note: comment-based help for `Stop-Log` still contains an outdated example that incorrectly states the function exits by default.
