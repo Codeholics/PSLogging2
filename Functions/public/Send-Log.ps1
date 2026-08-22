@@ -39,9 +39,14 @@ function Send-Log {
         $LogContext,
         [string]
         $LogPath,
+        [ValidateNotNullOrEmpty()]
         [Parameter(Mandatory=$true)][string]$EmailFrom,
-        [Parameter(Mandatory=$true)][string]$EmailTo,
-        [Parameter(Mandatory=$true)][string]$EmailSubject
+        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory=$true)][object]$EmailTo,
+        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory=$true)][string]$EmailSubject,
+        [int]
+        $MaxInlineSizeMB = 5
     )
 
     try {
@@ -57,11 +62,37 @@ function Send-Log {
     }
 
     Try {
-        $sBody = Get-Content -Path $LogPath -Raw -ErrorAction Stop
+        $fileInfo = Get-Item -Path $LogPath -ErrorAction Stop
+        $sizeBytes = $fileInfo.Length
+        $threshold = [int64]($MaxInlineSizeMB * 1MB)
+
+        # Normalize EmailTo to string[]
+        if ($EmailTo -is [string]) {
+            $toAddrs = $EmailTo -split '\s*,\s*' | Where-Object { $_ -ne '' }
+        } elseif ($EmailTo -is [System.Array]) {
+            $toAddrs = $EmailTo
+        } else {
+            $toAddrs = @($EmailTo.ToString())
+        }
+
         $oSmtp = New-Object Net.Mail.SmtpClient($SMTPServer)
         # set timeout before sending
         $oSmtp.Timeout = 30000
-        $oSmtp.Send($EmailFrom, $EmailTo, $EmailSubject, $sBody)
+
+        if ($sizeBytes -le $threshold) {
+            $sBody = Get-Content -Path $LogPath -Raw -ErrorAction Stop
+            $oSmtp.Send($EmailFrom, ($toAddrs -join ','), $EmailSubject, $sBody)
+        } else {
+            $mail = New-Object System.Net.Mail.MailMessage
+            $mail.From = $EmailFrom
+            foreach ($addr in $toAddrs) { $mail.To.Add($addr) }
+            $mail.Subject = $EmailSubject
+            $attachment = New-Object System.Net.Mail.Attachment($LogPath)
+            $mail.Attachments.Add($attachment)
+            $oSmtp.Send($mail)
+            if ($mail) { $mail.Dispose() }
+        }
+
         return $true
     } Catch {
         $inner = if ($_.Exception) { $_.Exception.Message } else { $_.ToString() }

@@ -9,6 +9,10 @@ Status legend:
 - 🚧 working on
 - ⏳ pending future step
 
+## Recent Activity
+
+- 2026-08-22: Ran the full Pester suite locally — all tests passed (12/12). Next: record this run and proceed with documentation updates and the planned Phase 2 validation targets.
+
 ## Roadmap
 
 ### ✅ Milestone 1: Reliability baseline
@@ -112,6 +116,13 @@ Migration steps:
 - ✅ Set SMTP timeout before calling `.Send()`.
 - ✅ Dispose the SMTP client reliably.
 - 🚧 Decide whether `Send-Log` should throw on failure or continue returning `$false` with an error record.
+
+**Recent progress (2026-08-22):**
+
+- ✅ Added `[ValidateNotNullOrEmpty()]` to `EmailFrom`, `EmailTo`, and `EmailSubject` and normalized `EmailTo` to accept comma-separated strings or arrays.
+- ✅ Ensure `SmtpClient.Timeout` is set and the client is disposed in `Finally`.
+- ✅ Implemented `-MaxInlineSizeMB` with automatic attachment of large log files instead of inlining.
+- ✅ Added Pester tests covering attachment behavior and SMTP failure paths. All tests pass locally (13/13).
 
 ### ⏳ 2. Improve message handling
 

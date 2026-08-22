@@ -35,6 +35,27 @@ public class FakeSmtpClient : IDisposable {
         $result | Should Be $true
     }
 
+    It "attaches the file when over -MaxInlineSizeMB" {
+        $log = Join-Path $script:tempDir 'big.log'
+        # create a small file but force attachment by setting threshold to 0
+        Set-Content -Path $log -Value 'body'
+
+        $global:sentWithAttachment = $false
+
+        Mock -CommandName New-Object -ModuleName PSLogging2 -ParameterFilter { $TypeName -eq 'Net.Mail.SmtpClient' } -MockWith {
+            $client = [pscustomobject]@{ Timeout = 0 }
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Send -Value { param($arg) if ($arg -is [System.Net.Mail.MailMessage]) { $global:sentWithAttachment = $true } } -PassThru
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Dispose -Value { } -PassThru
+            return $client
+        }
+
+        $result = Send-Log -SMTPServer 'dummy' -LogPath $log -EmailFrom 'me@example.com' -EmailTo 'you@example.com' -EmailSubject 'attach' -MaxInlineSizeMB 0
+        $result | Should Be $true
+        $global:sentWithAttachment | Should Be $true
+
+        Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
+    }
+
     AfterAll {
         # keep artifacts for inspection
     }
