@@ -58,7 +58,7 @@ Describe "Concurrent writes with separate LogContext instances" {
         $malformed = $lines | Where-Object { -not ($_ -match 'job') -or -not ($_ -match 'line') }
         $malformed.Count | Should Be 0
 
-        # Header should exist exactly once (initial header block contains the title line)
+        # Header should exist at least once (initial header block contains the title line)
         $headerCount = ([regex]::Matches($content, '\*{99}').Count)
         ($headerCount -ge 1) | Should Be $true
 

@@ -56,6 +56,49 @@ public class FakeSmtpClient : IDisposable {
         Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
     }
 
+    It "redacts inline content without modifying original file" {
+        $log = Join-Path $script:tempDir 'secret.log'
+        $secret = 'password=secr3t'
+        Set-Content -Path $log -Value "line1`n$secret`nline3"
+
+        $global:sentBody = $null
+
+        Mock -CommandName New-Object -ModuleName PSLogging2 -ParameterFilter { $TypeName -eq 'Net.Mail.SmtpClient' } -MockWith {
+            $client = [pscustomobject]@{ Timeout = 0 }
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Send -Value { param($from,$to,$subject,$body) $global:sentBody = $body } -PassThru
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Dispose -Value { } -PassThru
+            return $client
+        }
+
+        $result = Send-Log -SMTPServer 'dummy' -LogPath $log -EmailFrom 'me@example.com' -EmailTo 'you@example.com' -EmailSubject 'redact' -RedactRegex 'password=\S+' -RedactionMask '***'
+        $result | Should Be $true
+        $global:sentBody | Should Not Match 'secr3t'
+        $global:sentBody | Should Match '\*\*\*'
+
+        # Original file unchanged
+        (Get-Content -Path $log -Raw) | Should Match 'secr3t'
+        Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
+    }
+
+    It "redacts in-place when -RedactInPlace is used" {
+        $log = Join-Path $script:tempDir 'secret_inplace.log'
+        $secret = 'token=abcd1234'
+        Set-Content -Path $log -Value "start`n$secret`nend"
+
+        Mock -CommandName New-Object -ModuleName PSLogging2 -ParameterFilter { $TypeName -eq 'Net.Mail.SmtpClient' } -MockWith {
+            $client = [pscustomobject]@{ Timeout = 0 }
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Send -Value { } -PassThru
+            $null = $client | Add-Member -MemberType ScriptMethod -Name Dispose -Value { } -PassThru
+            return $client
+        }
+
+        $result = Send-Log -SMTPServer 'dummy' -LogPath $log -EmailFrom 'me@example.com' -EmailTo 'you@example.com' -EmailSubject 'redact' -RedactRegex 'token=\S+' -RedactionMask '[REDACTED]' -RedactInPlace
+        $result | Should Be $true
+        (Get-Content -Path $log -Raw) | Should Match '\[REDACTED\]'
+
+        Remove-Item -Path $log -Force -ErrorAction SilentlyContinue
+    }
+
     AfterAll {
         # keep artifacts for inspection
     }

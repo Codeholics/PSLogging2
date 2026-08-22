@@ -1,17 +1,11 @@
 # PSLogging2 Implementation Plan
 
-This plan reflects the items still not resolved after the recent concurrency and `Stop-Log` exit fixes.
-
 Status legend:
 
 - ✅ complete
 - ❌ no longer valid / replaced
 - 🚧 working on
 - ⏳ pending future step
-
-## Recent Activity
-
-- 2026-08-22: Ran the full Pester suite locally — all tests passed (12/12). Next: record this run and proceed with documentation updates and the planned Phase 2 validation targets.
 
 ## Roadmap
 
@@ -21,17 +15,17 @@ Status legend:
 - ✅ Remove unsafe control-flow patterns such as `Exit 1` inside reusable module code.
 - ✅ Standardize validation and error handling across the module.
 
-### 🚧 Milestone 2: Operational hardening
+### ✅ Milestone 2: Operational hardening
 
-- 🚧 Improve `Send-Log` reliability, validation, disposal, and large-log handling.
-- 🚧 Reduce remaining lifecycle and error-handling risks.
-- 🚧 Add tests for the core logging lifecycle and failure paths.
+- ✅ Improve `Send-Log` reliability, validation, disposal, and large-log handling.
+- ✅ Reduce remaining lifecycle and error-handling risks.
+- ✅ Add tests for the core logging lifecycle and failure paths.
 
 ### ⏳ Milestone 3: Documentation and UX cleanup
 
-- ✅ Bring `README.md` and `Review.md` into alignment with actual behavior; comment-based help still needs targeted fixes.
+- ✅ Bring `README.md` and `Review.md` into alignment with actual behavior.
 - ✅ Simplify timestamp configuration and other rough edges in the public API.
-- 🚧 Make the module easier to adopt safely in automation environments (remaining Send-Log hardening and documentation of migration patterns).
+- ⏳ Add usage documentation for the current `Send-Log` options.
 
 ### ⏳ Milestone 4: Architecture decisions
 
@@ -78,60 +72,21 @@ Applies to `Write-LogInfo`, `Write-LogWarning`, and `Write-LogError`.
 - ✅ Treat logging failures in `Write-LogError` as error-stream / terminating failures, not warnings, so automation cannot silently miss a failed error log write.
 - ✅ Removed the partial pipeline-oriented behavior; `Write-LogError`, writers, and `Send-Log` now require a single `-LogContext` or explicit `-LogPath`. Full pipeline support may be designed later as a dedicated feature.
 
-### ✅ Migration: Removing script-scope state
+## ✅ Phase 2: Harden `Send-Log`
 
-- The module no longer sets or relies on `$script:currentLogPath` or `$script:LogStopwatch`. All public writers and `Send-Log` accept an explicit `-LogContext` (or `-LogPath`).
-- Callers must capture the context returned by `Start-Log -ReturnContext` or create one with `New-LogContext` and pass it to writer functions and `Stop-Log`.
+### ✅ 1. SMTP behavior and validation
 
-Example (before):
-
-```powershell
-# legacy implicit state
-Start-Log -Style Simple -LogDir .\log -Title 'Job'
-Write-LogInfo -Message 'step'
-Stop-Log
-```
-
-Example (after):
-
-```powershell
-# explicit LogContext
-`$ctx = Start-Log -Style Simple -LogDir .\log -Title 'Job' -ReturnContext
-Write-LogInfo -Message 'step' -LogContext `$ctx
-Stop-Log -LogContext `$ctx
-```
-
-Migration steps:
-
-- Search your scripts for `Start-Log`/writers that rely on implicit script state and update to capture `-ReturnContext` and pass `-LogContext`.
-- Update automation and tests to use `-LogContext` or explicit `-LogPath`.
-- Run the Pester suite and smoke tests to validate behavior.
-
-
-## 🚧 Phase 2: Harden `Send-Log`
-
-### 🚧 1. Fix remaining SMTP behavior and validation
-
-- 🚧 Add `[ValidateNotNullOrEmpty()]` to `LogPath`, `EmailFrom`, `EmailTo`, and `EmailSubject`. `SMTPServer` is already validated.
+- ✅ Add `[ValidateNotNullOrEmpty()]` to `EmailFrom`, `EmailTo`, and `EmailSubject`.
+- ✅ Validate `LogPath` or `LogContext` through `Resolve-LogPath`.
 - ✅ Set SMTP timeout before calling `.Send()`.
 - ✅ Dispose the SMTP client reliably.
-- 🚧 Decide whether `Send-Log` should throw on failure or continue returning `$false` with an error record.
+- ✅ Return `$false` and write an error record by default; allow callers to opt into terminating behavior with `-ThrowOnFailure`.
 
-**Recent progress (2026-08-22):**
+### ✅ 2. Improve message handling
 
-- ✅ Added `[ValidateNotNullOrEmpty()]` to `EmailFrom`, `EmailTo`, and `EmailSubject` and normalized `EmailTo` to accept comma-separated strings or arrays.
-- ✅ Ensure `SmtpClient.Timeout` is set and the client is disposed in `Finally`.
-- ✅ Implemented `-MaxInlineSizeMB` with automatic attachment of large log files instead of inlining.
-- ✅ Added Pester tests covering attachment behavior and SMTP failure paths. All tests pass locally (13/13).
-
-### ⏳ 2. Improve message handling
-
-- 🚧 Decide whether `EmailTo` should remain a single string or become `[string[]]` with a `MailMessage` object.
-- 🚧 Decide how to handle large logs. Options:
-  - Attach the file instead of embedding it
-  - Enforce a size limit
-  - Truncate with a notice
-- 🚧 Document or implement a redaction strategy for secrets before emailing logs.
+- ✅ Accept comma-separated recipient strings and recipient arrays.
+- ✅ Inline logs up to `-MaxInlineSizeMB`; attach larger logs.
+- ✅ Support regex-based redaction with `-RedactRegex` and `-RedactionMask`; use a sanitized temporary copy by default and require `-RedactInPlace` to modify the source log.
 
 ### 🚧 3. Plan for auth modernization
 
@@ -142,9 +97,9 @@ Migration steps:
 
 ### ⏳ 1. Fix documentation drift
 
-- Update `README.md` to match current timestamp behavior. Right now the docs imply timestamps are appended by default, but the code only adds them when a timestamp switch is provided.
+- ✅ Update `README.md` to match current timestamp behavior.
 - ✅ Review all function help text for parameters and examples so they match current behavior.
- - ✅ Update `README.md` to match current timestamp behavior and explicit `LogContext` usage.
+- ✅ Update `README.md` to match explicit `LogContext` usage.
 
 ### ⏳ 2. Expand Validation Coverage
 
@@ -157,23 +112,24 @@ Migration steps:
 - ✅ `Send-Log` success-path validation
 - ✅ Concurrent multi-process writes
 
-#### ⏳ Failure Path Testing
+
+#### ✅ Failure Path Testing
 
 - ✅ Add retry-exhaustion coverage for `Append-LogAtomic`.
 - ✅ Add invalid or malformed `LogContext` coverage.
 - ✅ Add underlying append-failure coverage for writer functions.
 - ✅ Add `Send-Log` SMTP-exception coverage.
-- ⏳ Add tests for log directory creation failures.
+- ✅ Add tests for log directory creation failures.
 
-#### 🚧 Concurrency Integrity Validation
+#### ✅ Concurrency Integrity Validation
 
 Extend the existing concurrency suite to validate:
 
 - ✅ Exact expected entry count.
-- ⏳ Duplicate entry detection.
-- ⏳ Corrupted or interleaved entry detection.
-- ⏳ Header integrity validation.
-- ⏳ Footer integrity validation.
+- ✅ Duplicate entry detection.
+- ✅ Corrupted or interleaved entry detection.
+- ✅ Header presence validation.
+- ✅ Footer integrity validation.
 
 #### 🚧 Daily Initialization Race Testing
 
@@ -189,21 +145,14 @@ against a non-existent daily log.
 
 Validate:
 
-- ⏳ Only one header is created.
+- ⏳ Only one header initialization block is created.
 - ⏳ No duplicate initialization data exists.
-- ⏳ No corruption occurs.
-- ⏳ No initialization failures occur (including process exit-code assertions).
+- ✅ No malformed run entries are written.
+- ✅ No initialization failures occur (worker exit codes are checked).
 
-Recent verification:
-
-- ✅ `Tests/Pester/Timestamp.Tests.ps1` now covers `-TimestampPosition Front|Back|None` formatting and invalid value rejection.
-- ✅ Full `Tests/Pester` suite passes: 12 passed, 0 failed.
+Current verification: full `Tests/Pester` suite passes (17 passed, 0 failed).
 
 ## Additional Atomic Logging Validation
-
-The existing concurrency test suite validates multi-process and multi-job logging behavior.
-
-Additional validation targets:
 
 ### ⏳ Concurrency Scale Testing
 
@@ -213,17 +162,15 @@ Additional validation targets:
 - ⏳ Multiple runspaces
 - ⏳ Mixed workload scenarios
 
-### ⏳ Integrity Validation
+### ✅ Integrity Validation
 
-Validate:
-
-- ⏳ No duplicate entries
-- ⏳ No missing entries
-- ⏳ No malformed entries
-- ⏳ No interleaved/corrupted log lines
+- ✅ No duplicate entries
+- ✅ No missing entries
+- ✅ No malformed entries
+- ✅ No interleaved/corrupted log lines
 - ✅ Exact expected entry counts
-- ⏳ Correct header creation behavior
-- ⏳ Correct footer creation behavior
+- ✅ Header presence
+- ✅ Correct footer creation behavior
 
 ### ⏳ Environment Validation
 
@@ -238,7 +185,7 @@ Validate behavior with:
 - Explicit state passed between functions is the chosen direction; do not reintroduce module-wide script variables.
 - Evaluate whether parallel runspace support is a goal for this module or out of scope.
 
-## ⏳ Internal Architecture Improvements
+## ✅ Internal Architecture Improvements
 
 ### ✅ Centralize LogPath Resolution
 
@@ -255,13 +202,6 @@ Implemented private helper:
 Resolve-LogPath
 ```
 
-Benefits:
-
-- Reduces duplication
-- Simplifies maintenance
-- Provides consistent path resolution behavior
-- Makes future enhancements easier
-
 ### ✅ Standardize Exception Message Formatting
 
 Several functions currently generate exception messages independently.
@@ -271,13 +211,6 @@ Implemented private helper:
 ```powershell
 New-LogExceptionMessage
 ```
-
-Benefits:
-
-- Consistent diagnostics
-- Easier troubleshooting
-- Better GitHub issue reporting
-- Clearer production logging failures
 
 ### ✅ Establish Private Helper Structure
 
@@ -291,25 +224,6 @@ Functions\
         Resolve-LogPath.ps1
         New-LogExceptionMessage.ps1
 ```
-
-Benefits:
-
-- Cleaner architecture
-- Better separation of concerns
-- Easier long-term maintenance
-- Simpler contributor onboarding
-
-### 🚧 Code Review Follow-Up
-
-Items accepted from `Review.md` after comparison with the current implementation and tests:
-
-- ✅ **Standardize exception messages:** `New-LogExceptionMessage` is used for visible failures across core functions.
-- ✅ **Add path-aware diagnostics:** `New-LogExceptionMessage` accepts an optional `Path` and callers pass the log path where applicable.
-- ✅ **Simplify `Start-Log` error handling:** `Start-Log` uses focused error stages and fails fast on directory creation.
-- ✅ **Centralize LogContext construction:** `Start-Log -ReturnContext` returns a `New-LogContext` instance (stopwatch and start time preserved).
-- ✅ **Make filesystem failures terminating:** Key filesystem operations use `-ErrorAction Stop` (directory creation, log reads).
-- ✅ **Use `Resolve-LogPath` consistently:** `Stop-Log` and writer functions use `Resolve-LogPath` to validate contexts.
-- ✅ **Strengthen existing concurrency tests:** Concurrency tests now assert uniqueness, header/footer counts, malformed-line detection, and worker exit codes.
 
 ## ⏳ Future Enhancements
 
