@@ -17,12 +17,16 @@ Write-LogError -message "hello" -TimestampPosition Back -ToScreen -LogContext $c
 Write-LogError -message "hello" -TimestampPosition Front -ToScreen -LogContext $ctx
 Write-LogError -message "hello" -TimestampPosition Back -ToScreen -LogContext $ctx
 
+Write-LogWarning -Message "This is a warning" -TimestampPosition Back -ToScreen -LogContext $ctx
+
 Write-LogError -message "hello" -TimestampPosition Back -ToScreen -ExitGracefully -LogContext $ctx
 
-Write-LogWarning -Message "This is a warning" -TimestampPosition Back -ToScreen -LogContext $ctx
+
 # Send-Log -SMTPServer "smtp.example.com" -LogPath (Join-Path $PSScriptRoot 'log\2026\2026-08\A.log') -EmailFrom "me@example.com" -EmailTo "you@example.com" -EmailSubject "Log test"
 
+$ctx = Start-Log -Style Standard -Title "Test" -LogDir "C:\Code\PSLogging2\log" -ReturnContext
+
+$ctx | Format-List *
 
 
-
-Stop-Log -LogContext $ctx
+#Stop-Log -LogContext $ctx

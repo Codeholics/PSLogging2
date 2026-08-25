@@ -96,6 +96,8 @@ function Start-Log {
         $HeaderTitle = "$Title ($($Version)) - [$DateStamp]"
     }
 
+    $logPath = [System.IO.Path]::GetFullPath($logPath)
+
     # Initialize header or separator using an exclusive lock to avoid concurrent write races
     try {
         Initialize-LogAtomic -Path $logPath -Style $Style -HeaderTitle $HeaderTitle -DisableDailySeparator:$DisableDailySeparator | Out-Null
